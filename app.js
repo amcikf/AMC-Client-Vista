@@ -2680,18 +2680,42 @@ function renderSummaryCards(reports) {
   const topTaskCategory = taskCategorySummary[0]?.category || "No tasks yet";
 
   const cards = [
-    { label: "Total Clients", value: totals.clients.toString() },
-    { label: "Total Allocated Hours", value: formatHours(totals.allocated) },
-    { label: "Total Consumed Hours", value: formatHours(totals.consumed) },
-    { label: "Total Remaining Hours", value: formatHours(totals.remaining) },
-    { label: "Top Task Category", value: topTaskCategory },
-    { label: "Classified Tasks", value: allTasks.length ? `${totalClassifiedTasks}/${allTasks.length}` : "0/0" },
+    {
+      label: "Total Clients",
+      value: totals.clients.toString(),
+      help: "How many AMC clients are included in this report.",
+    },
+    {
+      label: "Total Allocated Hours",
+      value: formatHours(totals.allocated),
+      help: "The full AMC hours promised to all clients in this report.",
+    },
+    {
+      label: "Total Consumed Hours",
+      value: formatHours(totals.consumed),
+      help: "The hours already used by the tasks in the report.",
+    },
+    {
+      label: "Total Remaining Hours",
+      value: formatHours(totals.remaining),
+      help: "The AMC hours still left after subtracting the consumed time.",
+    },
+    {
+      label: "Top Task Category",
+      value: topTaskCategory,
+      help: "The category with the most time spent in the visible report.",
+    },
+    {
+      label: "Classified Tasks",
+      value: allTasks.length ? `${totalClassifiedTasks}/${allTasks.length}` : "0/0",
+      help: "How many real uploaded tasks were recognized into a category.",
+    },
   ];
 
   elements.summaryCards.innerHTML = cards
     .map(
       (card) => `
-        <article class="summary-card">
+        <article class="summary-card" title="${escapeHtml(card.help)}">
           <span>${escapeHtml(card.label)}</span>
           <strong>${escapeHtml(card.value)}</strong>
         </article>
@@ -2718,7 +2742,7 @@ function renderMainTable(reports) {
   elements.reportTableBody.innerHTML = filteredReports
     .map(
       (report) => `
-        <tr data-client-key="${escapeHtml(report.clientKey)}">
+        <tr data-client-key="${escapeHtml(report.clientKey)}" title="Open the detailed view for ${escapeHtml(report.clientName)}.">
           <td>${escapeHtml(report.clientName)}</td>
           <td>${escapeHtml(report.startDateDisplay)}</td>
           <td>${escapeHtml(formatAmcEndDateDisplay(report.endDateDisplay, report.endDateComparable))}</td>
@@ -2779,7 +2803,7 @@ function renderClientModal(report) {
         ${categorySummary
           .map(
             (item) => `
-              <article class="category-card">
+              <article class="category-card" title="This category groups tasks that belong to the same type of work.">
                 <span>${escapeHtml(item.category)}</span>
                 <strong>${escapeHtml(formatMinutes(item.minutes))}</strong>
                 <small>${escapeHtml(String(item.tasks))} task${item.tasks === 1 ? "" : "s"} | ${escapeHtml(formatPercentage(item.percent))}</small>
@@ -2802,32 +2826,32 @@ function renderClientModal(report) {
         <span class="pill ${report.amcStatus === "Expired" ? "expired" : report.usageBand === "green" ? "active" : "warning"}">
           ${escapeHtml(report.amcStatus)}
         </span>
-        <button id="clientPdfBtn" class="btn btn-primary">Generate Individual Client PDF</button>
+        <button id="clientPdfBtn" class="btn btn-primary" title="Export a PDF that contains only this client’s tasks and totals.">Generate Individual Client PDF</button>
       </div>
     </div>
 
     <section class="detail-grid">
-      <article class="detail-stat">
+      <article class="detail-stat" title="The AMC hours agreed with this client.">
         <span>Allocated Hours</span>
         <strong>${escapeHtml(formatHours(report.allocatedHours))}</strong>
       </article>
-      <article class="detail-stat">
+      <article class="detail-stat" title="The hours already used by this client’s tasks.">
         <span>Consumed Hours</span>
         <strong>${escapeHtml(formatHours(report.consumedHours))}</strong>
       </article>
-      <article class="detail-stat">
+      <article class="detail-stat" title="The hours still available in the AMC.">
         <span>Remaining Hours</span>
         <strong>${escapeHtml(formatHours(report.remainingHours))}</strong>
       </article>
-      <article class="detail-stat">
+      <article class="detail-stat" title="How much of the AMC has already been used.">
         <span>Usage %</span>
         <strong>${escapeHtml(formatPercentage(report.usagePct))}</strong>
       </article>
-      <article class="detail-stat">
+      <article class="detail-stat" title="The total task time counted in minutes.">
         <span>Total Minutes</span>
         <strong>${escapeHtml(formatMinutes(report.consumedMinutes))}</strong>
       </article>
-      <article class="detail-stat">
+      <article class="detail-stat" title="The task category with the highest time for this client.">
         <span>Top Category</span>
         <strong>${escapeHtml(report.topTaskCategory || "Other")}</strong>
       </article>

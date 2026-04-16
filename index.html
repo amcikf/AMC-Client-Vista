@@ -9,10 +9,10 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./styles.css?v=20260457">
+  <link rel="stylesheet" href="./styles.css?v=20260458">
   <script>
     (async () => {
-      const appVersion = "20260457";
+      const appVersion = "20260458";
       const storageKey = "amc.appVersion.v1";
       if (window.localStorage.getItem(storageKey) !== appVersion) {
         window.localStorage.setItem(storageKey, appVersion);
@@ -38,7 +38,7 @@
   <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
-  <script defer src="./app.js?v=20260457"></script>
+  <script defer src="./app.js?v=20260458"></script>
 </head>
 <body>
   <div class="page-bg" aria-hidden="true">
@@ -77,15 +77,15 @@
         </div>
       </div>
       <div class="hero-panel">
-        <div class="hero-stat">
+        <div class="hero-stat" title="The app does the work in your browser, so your files stay on your machine.">
           <span>Processing</span>
           <strong>100% Client-Side</strong>
         </div>
-        <div class="hero-stat">
+        <div class="hero-stat" title="Saved source links and file settings live only in this browser.">
           <span>Storage</span>
           <strong>Local Browser Memory</strong>
         </div>
-        <div class="hero-stat">
+        <div class="hero-stat" title="You can export both a summary PDF and a client-level PDF after generating the report.">
           <span>Exports</span>
           <strong>Summary + Client PDF</strong>
         </div>
@@ -93,24 +93,24 @@
     </header>
 
     <main class="layout">
-      <section class="panel workspace-panel">
+      <section class="panel workspace-panel" title="This area is where you choose between saved published links and local file uploads.">
         <div class="workspace-topline">
           <div class="subsection-heading">
             <h3>Source & Input Workspace</h3>
             <p>Switch between published links and file uploads without losing any saved settings or report actions.</p>
           </div>
           <div class="workspace-tab-rail" role="tablist" aria-label="Workspace sections">
-            <button id="workspaceSourcesTab" class="workspace-tab is-active" type="button" role="tab" aria-selected="true" aria-controls="workspaceSourcesPanel">
+            <button id="workspaceSourcesTab" class="workspace-tab is-active" type="button" role="tab" aria-selected="true" aria-controls="workspaceSourcesPanel" title="Use saved Google Sheet and Doc links here if you prefer refresh-based syncing.">
               Sources
             </button>
-            <button id="workspaceInputsTab" class="workspace-tab" type="button" role="tab" aria-selected="false" aria-controls="workspaceInputsPanel">
+            <button id="workspaceInputsTab" class="workspace-tab" type="button" role="tab" aria-selected="false" aria-controls="workspaceInputsPanel" title="Use local uploads here when you want to choose AMC and task files from your computer.">
               Inputs
             </button>
           </div>
         </div>
 
         <div class="workspace-panels">
-          <section id="workspaceSourcesPanel" class="workspace-panel-pane is-active" role="tabpanel" aria-labelledby="workspaceSourcesTab">
+          <section id="workspaceSourcesPanel" class="workspace-panel-pane is-active" role="tabpanel" aria-labelledby="workspaceSourcesTab" title="Paste or reuse the published AMC sheet, task doc, and alert email settings.">
             <div class="workspace-block workspace-block-wide">
               <div class="subsection-heading">
                 <h3>Published Sources</h3>
@@ -123,7 +123,7 @@
                   <div class="drive-field-row">
                     <input id="amcDriveInput" type="text" placeholder="Paste published sheet URL">
                     <div class="drive-field-actions">
-                      <button id="openAmcDriveBtn" class="btn btn-secondary btn-compact" type="button">Open Sheet</button>
+                      <button id="openAmcDriveBtn" class="btn btn-secondary btn-compact" type="button" title="Open the saved AMC published sheet in a new tab.">Open Sheet</button>
                     </div>
                   </div>
                 </label>
@@ -133,7 +133,7 @@
                   <div class="drive-field-row">
                     <input id="taskDriveInput" type="text" placeholder="Paste published doc URL">
                     <div class="drive-field-actions">
-                      <button id="openTaskDriveBtn" class="btn btn-secondary btn-compact" type="button">Open Doc</button>
+                      <button id="openTaskDriveBtn" class="btn btn-secondary btn-compact" type="button" title="Open the saved task document in a new tab.">Open Doc</button>
                     </div>
                   </div>
                 </label>
@@ -147,9 +147,9 @@
               </div>
 
               <div class="action-row drive-actions">
-                <button id="saveDriveConfigBtn" class="btn btn-primary" type="button">Save Sources</button>
-                <button id="clearDriveConfigBtn" class="btn btn-secondary" type="button">Clear Sources</button>
-                <button id="restoreDefaultsBtn" class="btn btn-secondary" type="button">Restore Published Defaults</button>
+                <button id="saveDriveConfigBtn" class="btn btn-primary" type="button" title="Save the current links and alert email in this browser.">Save Sources</button>
+                <button id="clearDriveConfigBtn" class="btn btn-secondary" type="button" title="Remove the saved links from this browser.">Clear Sources</button>
+                <button id="restoreDefaultsBtn" class="btn btn-secondary" type="button" title="Restore the default published links that ship with the app.">Restore Published Defaults</button>
               </div>
 
               <div class="drive-source-info" aria-label="Published source notes">
@@ -163,7 +163,7 @@
             </div>
           </section>
 
-          <section id="workspaceInputsPanel" class="workspace-panel-pane" role="tabpanel" aria-labelledby="workspaceInputsTab" hidden>
+          <section id="workspaceInputsPanel" class="workspace-panel-pane" role="tabpanel" aria-labelledby="workspaceInputsTab" hidden title="Upload the AMC Excel file and task TXT file from your device.">
             <div class="workspace-block workspace-block-wide workspace-inputs-block">
               <div class="subsection-heading">
                 <h3>Inputs</h3>
@@ -180,7 +180,7 @@
                   <input id="amcFile" type="file" accept=".xlsx,.xls,.xlsm,.xlsb">
                   <div class="upload-card-actions">
                     <span id="amcFileName" class="file-name">No file selected</span>
-                    <button id="watchAmcFileBtn" class="btn btn-secondary btn-compact" type="button">Live Watch</button>
+                    <button id="watchAmcFileBtn" class="btn btn-secondary btn-compact" type="button" title="Keep watching the AMC file and refresh the report when you save it again.">Live Watch</button>
                   </div>
                 </div>
 
@@ -193,7 +193,7 @@
                   <input id="taskFile" type="file" accept=".txt,text/plain">
                   <div class="upload-card-actions">
                     <span id="taskFileName" class="file-name">No file selected</span>
-                    <button id="watchTaskFileBtn" class="btn btn-secondary btn-compact" type="button">Live Watch</button>
+                    <button id="watchTaskFileBtn" class="btn btn-secondary btn-compact" type="button" title="Keep watching the task file and refresh the report when you save it again.">Live Watch</button>
                   </div>
                 </div>
               </div>
@@ -210,9 +210,9 @@
               </div>
 
               <div class="action-row">
-                <button id="generateBtn" class="btn btn-primary">Generate Report</button>
-                <button id="aiParseBtn" class="btn btn-secondary">AI Parse TXT</button>
-                <button id="summaryPdfBtn" class="btn btn-secondary" disabled>Generate All Clients Summary PDF</button>
+                <button id="generateBtn" class="btn btn-primary" title="Build the AMC utilization report from the selected files or sources.">Generate Report</button>
+                <button id="aiParseBtn" class="btn btn-secondary" title="Use AI parsing if the TXT file is messy or irregular.">AI Parse TXT</button>
+                <button id="summaryPdfBtn" class="btn btn-secondary" disabled title="Export one PDF for all clients after the report is generated.">Generate All Clients Summary PDF</button>
               </div>
 
               <div id="messageBox" class="message-box" aria-live="polite"></div>
@@ -221,18 +221,18 @@
         </div>
       </section>
 
-      <section id="reportSection" class="report-section hidden">
-        <p id="reportScopeNote" class="report-scope-note"></p>
+      <section id="reportSection" class="report-section hidden" title="This section shows the generated client summary and the detailed AMC report table.">
+        <p id="reportScopeNote" class="report-scope-note" title="Shows whether the report covers one month or all months."></p>
         <div class="summary-grid" id="summaryCards"></div>
 
-        <section class="panel table-panel">
+        <section class="panel table-panel" title="Click a row to open the client detail view and export a client PDF.">
           <div class="section-heading section-heading-inline">
             <div>
               <h2>Client Utilization Summary</h2>
               <p>Click a row to inspect detailed tasks and export an individual PDF.</p>
             </div>
             <div class="table-search">
-              <label for="clientSearchInput" class="table-search-label">Search Client</label>
+              <label for="clientSearchInput" class="table-search-label" title="Filter the report table by client name.">Search Client</label>
               <input id="clientSearchInput" type="search" placeholder="Type client name" autocomplete="off">
             </div>
           </div>

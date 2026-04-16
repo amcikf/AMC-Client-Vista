@@ -204,15 +204,17 @@
               <div class="report-filter-strip">
                 <label class="report-filter-field">
                   <span class="drive-label">Report Month</span>
-                  <input id="reportMonthInput" type="month">
+                  <select id="reportMonthInput" class="report-month-select">
+                    <option value="">All Months</option>
+                  </select>
                 </label>
-                <p class="report-filter-note">Leave blank to generate a full report for all months.</p>
+                <p class="report-filter-note">Choose a month to view only that month’s tasks. Keep All Months for the full AMC period.</p>
               </div>
 
               <div class="action-row">
                 <button id="generateBtn" class="btn btn-primary" title="Build the AMC utilization report from the selected files or sources.">Generate Report</button>
                 <button id="aiParseBtn" class="btn btn-secondary" title="Use AI parsing if the TXT file is messy or irregular.">AI Parse TXT</button>
-                <button id="summaryPdfBtn" class="btn btn-secondary" disabled title="Export one PDF for all clients after the report is generated.">Generate All Clients Summary PDF</button>
+                <button id="summaryPdfBtn" class="btn btn-secondary" disabled title="Download the report for the currently selected month as a PDF.">Download Selected Month PDF</button>
               </div>
 
               <div id="messageBox" class="message-box" aria-live="polite"></div>

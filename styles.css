@@ -712,18 +712,28 @@ input[type="email"]:focus {
   gap: 6px;
 }
 
-.report-filter-field input[type="month"] {
+.report-month-select {
   width: 100%;
   font: inherit;
   color: var(--text);
   border: 1px solid rgba(12, 78, 72, 0.16);
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.92);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(246, 248, 250, 0.92));
   padding: 12px 14px;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75);
+  appearance: none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--brand-dark) 50%),
+    linear-gradient(135deg, var(--brand-dark) 50%, transparent 50%);
+  background-position:
+    calc(100% - 18px) calc(50% - 3px),
+    calc(100% - 12px) calc(50% - 3px);
+  background-size: 6px 6px, 6px 6px;
+  background-repeat: no-repeat;
 }
 
-.report-filter-field input[type="month"]:focus {
+.report-month-select:focus {
   outline: none;
   border-color: rgba(31, 95, 157, 0.45);
   box-shadow: 0 0 0 4px rgba(31, 95, 157, 0.12);
@@ -1247,32 +1257,11 @@ tbody td:nth-child(7) {
   margin: 0 0 18px;
 }
 
-.monthly-summary {
-  display: grid;
-  gap: 12px;
-  margin: 0 0 18px;
-}
-
-.monthly-summary-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-}
-
 .category-card {
   padding: 14px 16px;
   border-radius: 16px;
   border: 1px solid rgba(31, 95, 157, 0.12);
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(244, 247, 250, 0.9));
-}
-
-.monthly-card {
-  padding: 14px 16px;
-  border-radius: 16px;
-  border: 1px solid rgba(31, 95, 157, 0.12);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(242, 246, 250, 0.92));
-  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.04);
 }
 
 .category-card span {
@@ -1291,29 +1280,6 @@ tbody td:nth-child(7) {
 }
 
 .category-card small {
-  display: block;
-  margin-top: 6px;
-  color: var(--muted);
-  font-size: 0.8rem;
-  font-weight: 700;
-}
-
-.monthly-card span {
-  display: block;
-  color: var(--muted);
-  font-size: 0.76rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-}
-
-.monthly-card strong {
-  display: block;
-  margin-top: 6px;
-  font-size: 1.05rem;
-}
-
-.monthly-card small {
   display: block;
   margin-top: 6px;
   color: var(--muted);
@@ -1446,8 +1412,7 @@ tbody td:nth-child(7) {
   .detail-grid,
   .totals-bar,
   .summary-grid,
-  .category-summary,
-  .monthly-summary-grid {
+  .category-summary {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -1460,8 +1425,7 @@ tbody td:nth-child(7) {
   .detail-grid,
   .totals-bar,
   .summary-grid,
-  .category-summary,
-  .monthly-summary-grid {
+  .category-summary {
     grid-template-columns: 1fr;
   }
 

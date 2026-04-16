@@ -2519,7 +2519,8 @@ function getAmcCountdownText(endDateComparable) {
 
   const today = new Date();
   const todayComparable = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
-  const remainingDays = Math.round((endDateComparable - todayComparable) / 86400000);
+  // Use ceil so partial-day offsets do not undercount calendar days left.
+  const remainingDays = Math.max(0, Math.ceil((endDateComparable - todayComparable) / 86400000));
 
   if (remainingDays >= 0 && remainingDays <= 5) {
     const suffix = remainingDays === 1 ? "day" : "days";

@@ -731,7 +731,9 @@ function findExpiringAmcClients(amcRows, windowDays) {
       }
 
       const endDate = startOfLocalDay(new Date(row.endDateComparable));
-      const daysRemaining = Math.round((endDate.getTime() - today.getTime()) / 86400000);
+      // Ceil keeps the alert from showing one day less when the timestamps are
+      // not perfectly aligned to midnight.
+      const daysRemaining = Math.max(0, Math.ceil((endDate.getTime() - today.getTime()) / 86400000));
       return {
         clientName: row.clientName,
         startDateDisplay: row.startDateDisplay,

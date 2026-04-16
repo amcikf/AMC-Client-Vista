@@ -1247,11 +1247,32 @@ tbody td:nth-child(7) {
   margin: 0 0 18px;
 }
 
+.monthly-summary {
+  display: grid;
+  gap: 12px;
+  margin: 0 0 18px;
+}
+
+.monthly-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
 .category-card {
   padding: 14px 16px;
   border-radius: 16px;
   border: 1px solid rgba(31, 95, 157, 0.12);
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(244, 247, 250, 0.9));
+}
+
+.monthly-card {
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(31, 95, 157, 0.12);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(242, 246, 250, 0.92));
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.04);
 }
 
 .category-card span {
@@ -1270,6 +1291,29 @@ tbody td:nth-child(7) {
 }
 
 .category-card small {
+  display: block;
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.monthly-card span {
+  display: block;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.monthly-card strong {
+  display: block;
+  margin-top: 6px;
+  font-size: 1.05rem;
+}
+
+.monthly-card small {
   display: block;
   margin-top: 6px;
   color: var(--muted);
@@ -1402,7 +1446,8 @@ tbody td:nth-child(7) {
   .detail-grid,
   .totals-bar,
   .summary-grid,
-  .category-summary {
+  .category-summary,
+  .monthly-summary-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -1415,7 +1460,8 @@ tbody td:nth-child(7) {
   .detail-grid,
   .totals-bar,
   .summary-grid,
-  .category-summary {
+  .category-summary,
+  .monthly-summary-grid {
     grid-template-columns: 1fr;
   }
 

@@ -2226,6 +2226,102 @@ function buildTaskCategorySummary(tasks = [], options = {}) {
   }));
 }
 
+function buildMonthlyReportSummary(tasks = [], startComparable = Number.NaN, endComparable = Number.NaN, reportMonth = "") {
+  const reportableTasks = tasks.filter((task) => task?.source !== "auto");
+  const scopedMonthKeys = isValidReportMonth(reportMonth) ? [reportMonth] : getMonthKeysBetween(startComparable, endComparable);
+  const monthKeys = scopedMonthKeys.length ? scopedMonthKeys : collectMonthKeysFromTasks(reportableTasks);
+  const buckets = new Map(
+    monthKeys.map((monthKey) => [
+      monthKey,
+      {
+        monthKey,
+        label: formatReportMonthLabel(monthKey),
+        minutes: 0,
+        tasks: 0,
+        topCategory: "Other",
+        _tasks: [],
+      },
+    ]),
+  );
+
+  for (const task of reportableTasks) {
+    const parsed = normalizeDateComparable(task?.date);
+    if (Number.isNaN(parsed)) {
+      continue;
+    }
+
+    const monthKey = getMonthKeyFromComparable(parsed);
+    if (!monthKey) {
+      continue;
+    }
+
+    if (!buckets.has(monthKey)) {
+      buckets.set(monthKey, {
+        monthKey,
+        label: formatReportMonthLabel(monthKey),
+        minutes: 0,
+        tasks: 0,
+        topCategory: "Other",
+        _tasks: [],
+      });
+    }
+
+    const bucket = buckets.get(monthKey);
+    bucket.minutes += Number(task.minutes) || 0;
+    bucket.tasks += 1;
+    bucket._tasks.push(task);
+  }
+
+  return [...buckets.values()]
+    .map((bucket) => {
+      const categorySummary = buildTaskCategorySummary(bucket._tasks || []);
+      return {
+        monthKey: bucket.monthKey,
+        label: bucket.label,
+        minutes: bucket.minutes,
+        tasks: bucket.tasks,
+        topCategory: categorySummary[0]?.category || "Other",
+      };
+    })
+    .sort((left, right) => left.monthKey.localeCompare(right.monthKey));
+}
+
+function getMonthKeyFromComparable(comparableDate) {
+  if (Number.isNaN(comparableDate)) {
+    return "";
+  }
+
+  const date = new Date(comparableDate);
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
+function getMonthKeysBetween(startComparable, endComparable) {
+  if (Number.isNaN(startComparable) || Number.isNaN(endComparable)) {
+    return [];
+  }
+
+  const startDate = new Date(startComparable);
+  const endDate = new Date(endComparable);
+  const cursor = new Date(Date.UTC(startDate.getUTCFullYear(), startDate.getUTCMonth(), 1));
+  const lastMonth = Date.UTC(endDate.getUTCFullYear(), endDate.getUTCMonth(), 1);
+
+  if (cursor.getTime() > lastMonth) {
+    return [];
+  }
+
+  const monthKeys = [];
+  while (cursor.getTime() <= lastMonth) {
+    monthKeys.push(`${cursor.getUTCFullYear()}-${String(cursor.getUTCMonth() + 1).padStart(2, "0")}`);
+    cursor.setUTCMonth(cursor.getUTCMonth() + 1);
+  }
+
+  return monthKeys;
+}
+
+function collectMonthKeysFromTasks(tasks = []) {
+  return [...new Set(tasks.map((task) => getMonthKeyFromComparable(normalizeDateComparable(task?.date))).filter(Boolean))].sort();
+}
+
 function stripExplicitMinutesFromText(description) {
   const text = String(description ?? "");
   if (!text.trim()) {
@@ -2321,6 +2417,7 @@ function buildClientReports(amcRows, taskEntries, reportMonth = "") {
       }));
       const reportableTasks = normalizedTasks.filter((task) => task.source !== "auto");
       const categorySummary = buildTaskCategorySummary(reportableTasks);
+      const monthlyReportSummary = buildMonthlyReportSummary(reportableTasks, row.startDateComparable, row.endDateComparable, reportMonth);
       const consumedMinutes = tasks.reduce((sum, task) => sum + task.minutes, 0);
       const consumedHours = consumedMinutes / 60;
       const remainingHours = row.allocatedHours - consumedHours;
@@ -2335,6 +2432,7 @@ function buildClientReports(amcRows, taskEntries, reportMonth = "") {
         ...row,
         tasks: normalizedTasks,
         taskCategorySummary: categorySummary,
+        monthlyReportSummary,
         topTaskCategory,
         classifiedTaskCount,
         consumedMinutes,
@@ -2794,6 +2892,8 @@ function closeModal() {
 function renderClientModal(report) {
   const sortedTasks = [...report.tasks].sort(compareTasksByDateDescending);
   const categorySummary = report.taskCategorySummary || buildTaskCategorySummary(sortedTasks.filter((task) => task.source !== "auto"));
+  const monthlySummary =
+    report.monthlyReportSummary || buildMonthlyReportSummary(sortedTasks.filter((task) => task.source !== "auto"), report.startDateComparable, report.endDateComparable, state.reportMonth);
   const reportPeriodLine = state.reportMonth
     ? `<p class="subtle">Report Period: ${escapeHtml(formatReportMonthLabel(state.reportMonth))}</p>`
     : "";
@@ -2811,6 +2911,29 @@ function renderClientModal(report) {
             `,
           )
           .join("")}
+      </section>
+    `
+    : "";
+  const monthlySummaryMarkup = monthlySummary.length
+    ? `
+      <section class="monthly-summary">
+        <div class="subsection-heading">
+          <h3>Monthly Breakup</h3>
+          <p>Har month ka alag summary dikhaya gaya hai, taaki aap AMC period ko month by month samajh sako.</p>
+        </div>
+        <div class="monthly-summary-grid">
+          ${monthlySummary
+            .map(
+              (item) => `
+                <article class="monthly-card" title="This month is shown separately so you can review AMC usage month by month.">
+                  <span>${escapeHtml(item.label)}</span>
+                  <strong>${escapeHtml(formatMinutes(item.minutes))}</strong>
+                  <small>${escapeHtml(String(item.tasks))} task${item.tasks === 1 ? "" : "s"} | Top: ${escapeHtml(item.topCategory || "Other")}</small>
+                </article>
+              `,
+            )
+            .join("")}
+        </div>
       </section>
     `
     : "";
@@ -2858,6 +2981,8 @@ function renderClientModal(report) {
     </section>
 
     ${categorySummaryMarkup}
+
+    ${monthlySummaryMarkup}
 
     <div class="table-wrap">
       <table class="detail-table">
@@ -2947,6 +3072,7 @@ async function generateSummaryPdf() {
   );
   const overallTasks = state.reports.flatMap((report) => report.tasks || []);
   const overallCategorySummary = buildTaskCategorySummary(overallTasks.filter((task) => task.source !== "auto")).slice(0, 3);
+  const monthlyOverview = buildMonthlyReportSummary(overallTasks.filter((task) => task.source !== "auto"), Number.NaN, Number.NaN, state.reportMonth);
 
   doc.setFontSize(10.5);
   doc.setTextColor(78, 90, 104);
@@ -2994,6 +3120,31 @@ async function generateSummaryPdf() {
     didDrawPage: addPdfFooter,
   });
 
+  if (monthlyOverview.length) {
+    const monthlyTitleY = doc.lastAutoTable.finalY + 10;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11.2);
+    doc.setTextColor(40, 52, 66);
+    doc.text("Monthly Overview", 14, monthlyTitleY);
+
+    doc.autoTable({
+      startY: monthlyTitleY + 4,
+      head: [["Month", "Task Count", "Consumed Minutes", "Consumed Hours", "Top Category"]],
+      body: monthlyOverview.map((item) => [
+        item.label,
+        String(item.tasks),
+        formatMinutes(item.minutes),
+        formatHours(item.minutes / 60),
+        item.topCategory,
+      ]),
+      theme: "grid",
+      styles: { fontSize: 9.4, cellPadding: 3.2, lineColor: [216, 221, 228], lineWidth: 0.1, textColor: [40, 50, 62] },
+      headStyles: { fillColor: [71, 85, 105], textColor: [255, 255, 255], fontStyle: "bold" },
+      alternateRowStyles: { fillColor: [249, 250, 252] },
+      didDrawPage: addPdfFooter,
+    });
+  }
+
   const periodSlug = state.reportMonth ? `-${slugify(reportPeriodLabel)}` : "-all-months";
   doc.save(`amc-hours-summary${periodSlug}-${timestampSlug()}.pdf`);
 }
@@ -3014,8 +3165,44 @@ async function generateClientPdf(report) {
     reportPeriodLabel,
   });
 
+  const monthlySummary =
+    report.monthlyReportSummary || buildMonthlyReportSummary(report.tasks || [], report.startDateComparable, report.endDateComparable, state.reportMonth);
+  const monthlyTitleY = clientHeaderBottom + 4;
+
+  if (monthlySummary.length) {
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11.2);
+    doc.setTextColor(40, 52, 66);
+    doc.text("Monthly Breakup", 14, monthlyTitleY);
+
+    doc.autoTable({
+      startY: monthlyTitleY + 4,
+      head: [["MONTH", "TASKS", "MINUTES", "HOURS", "TOP CATEGORY"]],
+      body: monthlySummary.map((item) => [
+        item.label,
+        String(item.tasks),
+        formatMinutes(item.minutes),
+        formatHours(item.minutes / 60),
+        item.topCategory,
+      ]),
+      theme: "grid",
+      styles: { fontSize: 8.2, cellPadding: 3.0, lineColor: [224, 229, 235], lineWidth: 0.1, valign: "top", textColor: [45, 56, 69] },
+      headStyles: { fillColor: [31, 47, 66], textColor: [255, 255, 255], fontStyle: "bold" },
+      alternateRowStyles: { fillColor: [250, 251, 253] },
+      margin: { left: 14, right: 14 },
+      columnStyles: {
+        0: { cellWidth: 38, halign: "left" },
+        1: { cellWidth: 18, halign: "center" },
+        2: { cellWidth: 24, halign: "center" },
+        3: { cellWidth: 20, halign: "center" },
+        4: { cellWidth: "auto" },
+      },
+      didDrawPage: addPdfFooter,
+    });
+  }
+
   doc.autoTable({
-    startY: clientHeaderBottom + 4,
+    startY: doc.lastAutoTable ? doc.lastAutoTable.finalY + 8 : clientHeaderBottom + 4,
     head: [["DATE", "DESCRIPTION", "TYPE", "MIN"]],
     body: report.tasks.length
       ? [...report.tasks].sort(compareTasksByDateDescending).map((task) => [
@@ -3843,7 +4030,7 @@ async function registerServiceWorker() {
   }
 
   try {
-    await navigator.serviceWorker.register("./sw.js?v=20260457");
+    await navigator.serviceWorker.register("./sw.js?v=20260459");
   } catch (error) {
     console.warn("Service worker registration skipped.", error);
   }

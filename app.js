@@ -3494,7 +3494,7 @@ async function registerServiceWorker() {
   }
 
   try {
-    await navigator.serviceWorker.register("./sw.js?v=20260453");
+    await navigator.serviceWorker.register("./sw.js?v=20260454");
   } catch (error) {
     console.warn("Service worker registration skipped.", error);
   }

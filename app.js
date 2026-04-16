@@ -99,6 +99,53 @@ const SMART_RULES = [
   { keywords: ["heading tag", "heading tags change"], minutes: 60 },
 ];
 
+const TASK_CATEGORY_RULES = [
+  {
+    category: "Design",
+    keywords: ["banner", "slider", "creative", "design", "layout", "mockup", "ui", "ux", "graphic", "image"],
+  },
+  {
+    category: "Development",
+    keywords: ["new page", "create page", "page create", "integration", "development", "plugin", "script", "code", "feature"],
+  },
+  {
+    category: "Content",
+    keywords: ["blog", "article", "content", "copy", "write", "rewrite", "edit content", "text update"],
+  },
+  {
+    category: "SEO",
+    keywords: ["meta title", "meta description", "seo", "search console", "schema", "sitemap", "robots", "canonical", "alt text", "keyword"],
+  },
+  {
+    category: "Maintenance",
+    keywords: ["wordpress update", "plugin update", "core update", "backup", "restore", "optimize", "maintenance", "update"],
+  },
+  {
+    category: "Security",
+    keywords: ["vapt", "security", "malware", "ssl", "firewall", "vulnerability", "patch"],
+  },
+  {
+    category: "Bug Fix",
+    keywords: ["bug", "fix", "issue", "error", "not working", "troubleshoot", "broken", "problem"],
+  },
+  {
+    category: "Hosting / Server",
+    keywords: ["server", "hosting", "migration", "dns", "cpanel", "php", "email issue", "hosting issue"],
+  },
+  {
+    category: "Analytics",
+    keywords: ["analytics", "dashboard", "tracking", "tag manager", "pixel", "report", "search console"],
+  },
+  {
+    category: "Communication",
+    keywords: ["meeting", "call", "follow up", "discussion", "email", "coordination", "approval"],
+  },
+  {
+    category: "Other",
+    keywords: [],
+  },
+];
+
 const AMC_HEADER_ALIASES = {
   clientName: [
     "client name",
@@ -2064,6 +2111,8 @@ function createTaskEntry(date, clientName, description, minutes, rawLine, source
   const explicitMinutes = extractExplicitMinutes(description);
   const resolvedMinutes = Number.isNaN(explicitMinutes) ? minutes : explicitMinutes;
   const rawDescription = String(description ?? "").trimEnd();
+  const normalizedDescription = normalizeTaskDescription(rawDescription);
+  const taskCategory = classifyTaskCategory(normalizedDescription);
 
   return {
     rawLine,
@@ -2071,10 +2120,13 @@ function createTaskEntry(date, clientName, description, minutes, rawLine, source
     clientName,
     clientKey: normalizeClientKey(clientName),
     description: rawDescription,
+    normalizedDescription,
     minutes: resolvedMinutes,
     hours: resolvedMinutes / 60,
     source,
     minutesSource: Number.isNaN(explicitMinutes) ? inferMinutesSource(rawDescription) : "explicit",
+    category: taskCategory.category,
+    categoryMatchedKeyword: taskCategory.keyword,
   };
 }
 
@@ -2095,6 +2147,61 @@ function normalizeTaskDescription(description) {
 
 function getDisplayTaskDescription(description) {
   return String(description ?? "");
+}
+
+function classifyTaskCategory(description) {
+  const text = String(description ?? "").trim().toLowerCase();
+  if (!text) {
+    return { category: "Other", keyword: "" };
+  }
+
+  let bestMatch = { category: "Other", keyword: "", score: 0 };
+
+  for (const rule of TASK_CATEGORY_RULES) {
+    if (rule.category === "Other") {
+      continue;
+    }
+
+    for (const keyword of rule.keywords) {
+      const normalizedKeyword = String(keyword).toLowerCase();
+      if (!normalizedKeyword) {
+        continue;
+      }
+
+      if (!text.includes(normalizedKeyword)) {
+        continue;
+      }
+
+      const score = normalizedKeyword.split(/\s+/).length * 10 + normalizedKeyword.length;
+      if (score > bestMatch.score) {
+        bestMatch = { category: rule.category, keyword: normalizedKeyword, score };
+      }
+    }
+  }
+
+  return { category: bestMatch.category, keyword: bestMatch.keyword };
+}
+
+function buildTaskCategorySummary(tasks = []) {
+  const buckets = new Map();
+  let totalMinutes = 0;
+
+  for (const task of tasks) {
+    const category = String(task?.category || "Other").trim() || "Other";
+    const minutes = Number(task?.minutes) || 0;
+    totalMinutes += minutes;
+    const current = buckets.get(category) || { category, minutes: 0, tasks: 0 };
+    current.minutes += minutes;
+    current.tasks += 1;
+    buckets.set(category, current);
+  }
+
+  const summary = [...buckets.values()].sort((left, right) => right.minutes - left.minutes || right.tasks - left.tasks || left.category.localeCompare(right.category));
+
+  return summary.map((item) => ({
+    ...item,
+    percent: totalMinutes > 0 ? (item.minutes / totalMinutes) * 100 : 0,
+  }));
 }
 
 function stripExplicitMinutesFromText(description) {
@@ -2190,6 +2297,7 @@ function buildClientReports(amcRows, taskEntries, reportMonth = "") {
         ...task,
         description: getDisplayTaskDescription(task.description),
       }));
+      const categorySummary = buildTaskCategorySummary(normalizedTasks);
       const consumedMinutes = tasks.reduce((sum, task) => sum + task.minutes, 0);
       const consumedHours = consumedMinutes / 60;
       const remainingHours = row.allocatedHours - consumedHours;
@@ -2197,10 +2305,15 @@ function buildClientReports(amcRows, taskEntries, reportMonth = "") {
       const remainingPct = row.allocatedHours === 0 ? 0 : (remainingHours / row.allocatedHours) * 100;
       const usageBand = remainingHours < 0 ? "red" : remainingPct <= 20 ? "orange" : "green";
       const amcStatus = isExpired(row.endDateComparable) ? "Expired" : "Active";
+      const topTaskCategory = categorySummary[0]?.category || "Other";
+      const classifiedTaskCount = normalizedTasks.filter((task) => task.category && task.category !== "Other").length;
 
       return {
         ...row,
         tasks: normalizedTasks,
+        taskCategorySummary: categorySummary,
+        topTaskCategory,
+        classifiedTaskCount,
         consumedMinutes,
         consumedHours,
         remainingHours,
@@ -2537,12 +2650,18 @@ function renderSummaryCards(reports) {
     },
     { clients: 0, allocated: 0, consumed: 0, remaining: 0 },
   );
+  const allTasks = reports.flatMap((report) => report.tasks || []);
+  const taskCategorySummary = buildTaskCategorySummary(allTasks);
+  const totalClassifiedTasks = allTasks.filter((task) => task.category && task.category !== "Other").length;
+  const topTaskCategory = taskCategorySummary[0]?.category || "No tasks yet";
 
   const cards = [
     { label: "Total Clients", value: totals.clients.toString() },
     { label: "Total Allocated Hours", value: formatHours(totals.allocated) },
     { label: "Total Consumed Hours", value: formatHours(totals.consumed) },
     { label: "Total Remaining Hours", value: formatHours(totals.remaining) },
+    { label: "Top Task Category", value: topTaskCategory },
+    { label: "Classified Tasks", value: allTasks.length ? `${totalClassifiedTasks}/${allTasks.length}` : "0/0" },
   ];
 
   elements.summaryCards.innerHTML = cards
@@ -2626,8 +2745,26 @@ function closeModal() {
 
 function renderClientModal(report) {
   const sortedTasks = [...report.tasks].sort(compareTasksByDateDescending);
+  const categorySummary = report.taskCategorySummary || buildTaskCategorySummary(sortedTasks);
   const reportPeriodLine = state.reportMonth
     ? `<p class="subtle">Report Period: ${escapeHtml(formatReportMonthLabel(state.reportMonth))}</p>`
+    : "";
+  const categorySummaryMarkup = categorySummary.length
+    ? `
+      <section class="category-summary">
+        ${categorySummary
+          .map(
+            (item) => `
+              <article class="category-card">
+                <span>${escapeHtml(item.category)}</span>
+                <strong>${escapeHtml(formatMinutes(item.minutes))}</strong>
+                <small>${escapeHtml(String(item.tasks))} task${item.tasks === 1 ? "" : "s"} | ${escapeHtml(formatPercentage(item.percent))}</small>
+              </article>
+            `,
+          )
+          .join("")}
+      </section>
+    `
     : "";
   elements.modalContent.innerHTML = `
     <div class="detail-actions">
@@ -2666,7 +2803,13 @@ function renderClientModal(report) {
         <span>Total Minutes</span>
         <strong>${escapeHtml(formatMinutes(report.consumedMinutes))}</strong>
       </article>
+      <article class="detail-stat">
+        <span>Top Category</span>
+        <strong>${escapeHtml(report.topTaskCategory || "Other")}</strong>
+      </article>
     </section>
+
+    ${categorySummaryMarkup}
 
     <div class="table-wrap">
       <table class="detail-table">
@@ -2674,6 +2817,7 @@ function renderClientModal(report) {
           <tr>
             <th class="col-date">Date</th>
             <th>Task Description</th>
+            <th class="col-category">Category</th>
             <th class="col-minutes">Minutes</th>
           </tr>
         </thead>
@@ -2686,6 +2830,9 @@ function renderClientModal(report) {
                       <tr>
                         <td class="col-date">${escapeHtml(task.date)}</td>
                         <td class="task-description">${escapeHtml(getDisplayTaskDescription(task.description))}</td>
+                        <td class="col-category">
+                          <span class="category-chip">${escapeHtml(task.category || "Other")}</span>
+                        </td>
                         <td class="col-minutes">${escapeHtml(formatMinutes(task.minutes))}</td>
                       </tr>
                     `,
@@ -2693,7 +2840,7 @@ function renderClientModal(report) {
                   .join("")
               : `
                 <tr>
-                  <td colspan="3">No task entries were found for this client in the uploaded TXT file.</td>
+                  <td colspan="4">No task entries were found for this client in the uploaded TXT file.</td>
                 </tr>
               `
           }
@@ -2750,6 +2897,8 @@ async function generateSummaryPdf() {
     },
     { allocated: 0, consumed: 0, remaining: 0 },
   );
+  const overallTasks = state.reports.flatMap((report) => report.tasks || []);
+  const overallCategorySummary = buildTaskCategorySummary(overallTasks).slice(0, 3);
 
   doc.setFontSize(10.5);
   doc.setTextColor(78, 90, 104);
@@ -2759,8 +2908,17 @@ async function generateSummaryPdf() {
     summaryHeaderBottom + 5,
   );
 
+  if (overallCategorySummary.length) {
+    const categoryLine = overallCategorySummary
+      .map((item) => `${item.category}: ${formatMinutes(item.minutes)} (${formatPercentage(item.percent)})`)
+      .join(" | ");
+    doc.setFontSize(9.4);
+    doc.setTextColor(86, 99, 112);
+    doc.text(`Top categories: ${categoryLine}`, 14, summaryHeaderBottom + 11.2);
+  }
+
   doc.autoTable({
-    startY: summaryHeaderBottom + 13,
+    startY: summaryHeaderBottom + (overallCategorySummary.length ? 18 : 13),
     head: [[
       "Client Name",
       "AMC Start Date",
@@ -2977,7 +3135,43 @@ async function drawReferenceStyleClientPdfHeader(doc, report, { logoDataUrl = ""
     doc.text(item[2], x + 3.2, y + 26.2);
   });
 
-  const activityTitleY = statsTop + statCardHeight + 8;
+  const categorySummary = report.taskCategorySummary || buildTaskCategorySummary(report.tasks || []);
+  const categoryTitleY = statsTop + statCardHeight + 8;
+  let activityTitleY = categoryTitleY;
+
+  if (categorySummary.length) {
+    const topCategories = categorySummary.slice(0, 3);
+    const categoryCardWidth = (pageWidth - marginX * 2 - 8) / 3;
+    const categoryCardHeight = 24;
+
+    doc.setTextColor(40, 52, 66);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11.2);
+    doc.text("Task Categories", marginX, categoryTitleY);
+
+    topCategories.forEach((item, index) => {
+      const x = marginX + index * (categoryCardWidth + 4);
+      const y = categoryTitleY + 5;
+      doc.setFillColor(255, 255, 255);
+      doc.setDrawColor(224, 229, 235);
+      doc.setLineWidth(0.2);
+      doc.roundedRect(x, y, categoryCardWidth, categoryCardHeight, 2.2, 2.2, "FD");
+      doc.setTextColor(89, 102, 117);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(7.8);
+      doc.text(item.category, x + 3, y + 6.2);
+      doc.setTextColor(31, 43, 57);
+      doc.setFontSize(11.5);
+      doc.text(formatMinutes(item.minutes), x + 3, y + 13.8);
+      doc.setTextColor(110, 122, 135);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(7.1);
+      doc.text(`${item.tasks} task${item.tasks === 1 ? "" : "s"} | ${formatPercentage(item.percent)}`, x + 3, y + 19.2);
+    });
+
+    activityTitleY = categoryTitleY + 34;
+  }
+
   const activitySubY = activityTitleY + 5.2;
 
   doc.setTextColor(40, 52, 66);
@@ -3601,7 +3795,7 @@ async function registerServiceWorker() {
   }
 
   try {
-    await navigator.serviceWorker.register("./sw.js?v=20260455");
+    await navigator.serviceWorker.register("./sw.js?v=20260457");
   } catch (error) {
     console.warn("Service worker registration skipped.", error);
   }

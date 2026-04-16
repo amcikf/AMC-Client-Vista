@@ -3489,12 +3489,17 @@ async function registerServiceWorker() {
     return;
   }
 
-  if (!["http:", "https:"].includes(window.location.protocol)) {
+  const isLocalhost =
+    window.location.hostname === "localhost" ||
+    window.location.hostname === "127.0.0.1" ||
+    window.location.hostname === "[::1]";
+
+  if (!isLocalhost) {
     return;
   }
 
   try {
-    await navigator.serviceWorker.register("./sw.js?v=20260454");
+    await navigator.serviceWorker.register("./sw.js?v=20260455");
   } catch (error) {
     console.warn("Service worker registration skipped.", error);
   }

@@ -730,10 +730,13 @@ function findExpiringAmcClients(amcRows, windowDays) {
         return null;
       }
 
-      const endDate = startOfLocalDay(new Date(row.endDateComparable));
-      // Ceil keeps the alert from showing one day less when the timestamps are
-      // not perfectly aligned to midnight.
-      const daysRemaining = Math.max(0, Math.ceil((endDate.getTime() - today.getTime()) / 86400000));
+      const endParts = parseCalendarDateParts(row.endDateDisplay) || parseComparableDateParts(row.endDateComparable);
+      if (!endParts) {
+        return null;
+      }
+
+      const endDate = startOfLocalDay(new Date(endParts.year, endParts.month - 1, endParts.day));
+      const daysRemaining = Math.max(0, Math.round((endDate.getTime() - today.getTime()) / 86400000));
       return {
         clientName: row.clientName,
         startDateDisplay: row.startDateDisplay,
@@ -748,6 +751,123 @@ function findExpiringAmcClients(amcRows, windowDays) {
 
 function startOfLocalDay(date) {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+function parseComparableDateParts(comparableDate) {
+  if (Number.isNaN(comparableDate)) {
+    return null;
+  }
+
+  const date = new Date(comparableDate);
+  return {
+    year: date.getFullYear(),
+    month: date.getMonth() + 1,
+    day: date.getDate(),
+  };
+}
+
+function parseCalendarDateParts(value) {
+  const text = String(value ?? "").trim();
+  if (!text) {
+    return null;
+  }
+
+  const ddMmmYyyyMatch = text.match(/^(\d{1,2})-([a-zA-Z]{3,9})-(\d{4})$/);
+  if (ddMmmYyyyMatch) {
+    const [, day, monthText, year] = ddMmmYyyyMatch;
+    const monthIndex = getMonthIndex(monthText);
+    if (monthIndex !== -1) {
+      return { day: Number(day), month: monthIndex + 1, year: Number(year) };
+    }
+  }
+
+  const ddMmmYyMatch = text.match(/^(\d{1,2})-([a-zA-Z]{3,9})-(\d{2})$/);
+  if (ddMmmYyMatch) {
+    const [, day, monthText, year] = ddMmmYyMatch;
+    const monthIndex = getMonthIndex(monthText);
+    if (monthIndex !== -1) {
+      const yearNumber = Number(year);
+      const fullYear = yearNumber >= 70 ? 1900 + yearNumber : 2000 + yearNumber;
+      return { day: Number(day), month: monthIndex + 1, year: fullYear };
+    }
+  }
+
+  const ddMmYyyyMatch = text.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+  if (ddMmYyyyMatch) {
+    const [, day, month, year] = ddMmYyyyMatch;
+    return { day: Number(day), month: Number(month), year: Number(year) };
+  }
+
+  const ddMmYyMatch = text.match(/^(\d{1,2})-(\d{1,2})-(\d{2})$/);
+  if (ddMmYyMatch) {
+    const [, day, month, year] = ddMmYyMatch;
+    const yearNumber = Number(year);
+    const fullYear = yearNumber >= 70 ? 1900 + yearNumber : 2000 + yearNumber;
+    return { day: Number(day), month: Number(month), year: fullYear };
+  }
+
+  const ddSlashMmSlashYyyyMatch = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (ddSlashMmSlashYyyyMatch) {
+    const [, day, month, year] = ddSlashMmSlashYyyyMatch;
+    return { day: Number(day), month: Number(month), year: Number(year) };
+  }
+
+  const ddSlashMmSlashYyMatch = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2})$/);
+  if (ddSlashMmSlashYyMatch) {
+    const [, day, month, year] = ddSlashMmSlashYyMatch;
+    const yearNumber = Number(year);
+    const fullYear = yearNumber >= 70 ? 1900 + yearNumber : 2000 + yearNumber;
+    return { day: Number(day), month: Number(month), year: fullYear };
+  }
+
+  const yyyyMmDdMatch = text.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (yyyyMmDdMatch) {
+    const [, year, month, day] = yyyyMmDdMatch;
+    return { day: Number(day), month: Number(month), year: Number(year) };
+  }
+
+  const parsed = new Date(text);
+  if (!Number.isNaN(parsed.getTime())) {
+    return {
+      day: parsed.getDate(),
+      month: parsed.getMonth() + 1,
+      year: parsed.getFullYear(),
+    };
+  }
+
+  return null;
+}
+
+function getMonthIndex(monthText) {
+  const normalized = String(monthText ?? "").trim().toLowerCase();
+  const months = {
+    jan: 0,
+    january: 0,
+    feb: 1,
+    february: 1,
+    mar: 2,
+    march: 2,
+    apr: 3,
+    april: 3,
+    may: 4,
+    jun: 5,
+    june: 5,
+    jul: 6,
+    july: 6,
+    aug: 7,
+    august: 7,
+    sep: 8,
+    sept: 8,
+    september: 8,
+    oct: 9,
+    october: 9,
+    nov: 10,
+    november: 10,
+    dec: 11,
+    december: 11,
+  };
+
+  return Object.prototype.hasOwnProperty.call(months, normalized) ? months[normalized] : -1;
 }
 
 function addDays(date, amount) {

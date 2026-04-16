@@ -2512,15 +2512,11 @@ function formatAmcEndDateDisplay(endDateDisplay, endDateComparable) {
   return baseValue;
 }
 
-function getAmcCountdownText(endDateComparable) {
-  if (Number.isNaN(endDateComparable)) {
+function getAmcCountdownText(endDateDisplay, endDateComparable) {
+  const remainingDays = getCalendarDaysRemaining(endDateDisplay, endDateComparable);
+  if (remainingDays === null) {
     return "";
   }
-
-  const today = new Date();
-  const todayComparable = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
-  // Use ceil so partial-day offsets do not undercount calendar days left.
-  const remainingDays = Math.max(0, Math.ceil((endDateComparable - todayComparable) / 86400000));
 
   if (remainingDays >= 0 && remainingDays <= 5) {
     const suffix = remainingDays === 1 ? "day" : "days";
@@ -2593,8 +2589,8 @@ function renderMainTable(reports) {
                 ${escapeHtml(report.amcStatus)}
               </span>
               ${
-                getAmcCountdownText(report.endDateComparable)
-                  ? `<span class="status-countdown">${escapeHtml(getAmcCountdownText(report.endDateComparable))}</span>`
+                getAmcCountdownText(report.endDateDisplay, report.endDateComparable)
+                  ? `<span class="status-countdown">${escapeHtml(getAmcCountdownText(report.endDateDisplay, report.endDateComparable))}</span>`
                   : ""
               }
             </div>
@@ -2994,6 +2990,112 @@ async function drawReferenceStyleClientPdfHeader(doc, report, { logoDataUrl = ""
   doc.text(`- ${report.tasks.length} entries | ${reportPeriodLabel}`, marginX + 25, activityTitleY);
 
   return activitySubY + 4;
+}
+
+function getCalendarDaysRemaining(endDateDisplay, endDateComparable) {
+  const todayParts = getTodayDateParts();
+  const endParts = parseCalendarDateParts(endDateDisplay) || parseComparableDateParts(endDateComparable);
+  if (!endParts) {
+    return null;
+  }
+
+  const todayComparable = Date.UTC(todayParts.year, todayParts.month - 1, todayParts.day);
+  const endComparable = Date.UTC(endParts.year, endParts.month - 1, endParts.day);
+  return Math.max(0, Math.round((endComparable - todayComparable) / 86400000));
+}
+
+function getTodayDateParts() {
+  const today = new Date();
+  return {
+    year: today.getFullYear(),
+    month: today.getMonth() + 1,
+    day: today.getDate(),
+  };
+}
+
+function parseComparableDateParts(comparableDate) {
+  if (Number.isNaN(comparableDate)) {
+    return null;
+  }
+
+  const date = new Date(comparableDate);
+  return {
+    year: date.getFullYear(),
+    month: date.getMonth() + 1,
+    day: date.getDate(),
+  };
+}
+
+function parseCalendarDateParts(value) {
+  const text = String(value ?? "").trim();
+  if (!text) {
+    return null;
+  }
+
+  const ddMmmYyyyMatch = text.match(/^(\d{1,2})-([a-zA-Z]{3,9})-(\d{4})$/);
+  if (ddMmmYyyyMatch) {
+    const [, day, monthText, year] = ddMmmYyyyMatch;
+    const monthIndex = getMonthIndex(monthText);
+    if (monthIndex !== -1) {
+      return { day: Number(day), month: monthIndex + 1, year: Number(year) };
+    }
+  }
+
+  const ddMmmYyMatch = text.match(/^(\d{1,2})-([a-zA-Z]{3,9})-(\d{2})$/);
+  if (ddMmmYyMatch) {
+    const [, day, monthText, year] = ddMmmYyMatch;
+    const monthIndex = getMonthIndex(monthText);
+    if (monthIndex !== -1) {
+      const yearNumber = Number(year);
+      const fullYear = yearNumber >= 70 ? 1900 + yearNumber : 2000 + yearNumber;
+      return { day: Number(day), month: monthIndex + 1, year: fullYear };
+    }
+  }
+
+  const ddMmYyyyMatch = text.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+  if (ddMmYyyyMatch) {
+    const [, day, month, year] = ddMmYyyyMatch;
+    return { day: Number(day), month: Number(month), year: Number(year) };
+  }
+
+  const ddMmYyMatch = text.match(/^(\d{1,2})-(\d{1,2})-(\d{2})$/);
+  if (ddMmYyMatch) {
+    const [, day, month, year] = ddMmYyMatch;
+    const yearNumber = Number(year);
+    const fullYear = yearNumber >= 70 ? 1900 + yearNumber : 2000 + yearNumber;
+    return { day: Number(day), month: Number(month), year: fullYear };
+  }
+
+  const ddSlashMmSlashYyyyMatch = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (ddSlashMmSlashYyyyMatch) {
+    const [, day, month, year] = ddSlashMmSlashYyyyMatch;
+    return { day: Number(day), month: Number(month), year: Number(year) };
+  }
+
+  const ddSlashMmSlashYyMatch = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2})$/);
+  if (ddSlashMmSlashYyMatch) {
+    const [, day, month, year] = ddSlashMmSlashYyMatch;
+    const yearNumber = Number(year);
+    const fullYear = yearNumber >= 70 ? 1900 + yearNumber : 2000 + yearNumber;
+    return { day: Number(day), month: Number(month), year: fullYear };
+  }
+
+  const yyyyMmDdMatch = text.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (yyyyMmDdMatch) {
+    const [, year, month, day] = yyyyMmDdMatch;
+    return { day: Number(day), month: Number(month), year: Number(year) };
+  }
+
+  const parsed = new Date(text);
+  if (!Number.isNaN(parsed.getTime())) {
+    return {
+      day: parsed.getDate(),
+      month: parsed.getMonth() + 1,
+      year: parsed.getFullYear(),
+    };
+  }
+
+  return null;
 }
 
 function getTaskTypeLabel(description) {

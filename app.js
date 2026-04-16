@@ -118,7 +118,7 @@ const TASK_CATEGORY_RULES = [
   },
   {
     category: "Maintenance",
-    keywords: ["wordpress update", "plugin update", "core update", "backup", "restore", "optimize", "maintenance", "update"],
+    keywords: ["wordpress update", "plugin update", "core update", "website update", "site update", "page update", "backup", "restore", "optimize", "maintenance"],
   },
   {
     category: "Security",
@@ -2168,7 +2168,7 @@ function classifyTaskCategory(description) {
         continue;
       }
 
-      if (!text.includes(normalizedKeyword)) {
+      if (!matchesTaskKeyword(text, normalizedKeyword)) {
         continue;
       }
 
@@ -2182,11 +2182,33 @@ function classifyTaskCategory(description) {
   return { category: bestMatch.category, keyword: bestMatch.keyword };
 }
 
-function buildTaskCategorySummary(tasks = []) {
+function matchesTaskKeyword(text, keyword) {
+  const normalizedText = String(text ?? "").toLowerCase();
+  const normalizedKeyword = String(keyword ?? "").trim().toLowerCase();
+
+  if (!normalizedText || !normalizedKeyword) {
+    return false;
+  }
+
+  const escapedKeyword = escapeRegExp(normalizedKeyword).replace(/\s+/g, "\\s+");
+  const pattern = new RegExp(`(^|[^a-z0-9])${escapedKeyword}([^a-z0-9]|$)`, "i");
+  return pattern.test(normalizedText);
+}
+
+function escapeRegExp(value) {
+  return String(value ?? "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function buildTaskCategorySummary(tasks = [], options = {}) {
+  const { includeAutoTasks = false } = options;
   const buckets = new Map();
   let totalMinutes = 0;
 
   for (const task of tasks) {
+    if (!includeAutoTasks && task?.source === "auto") {
+      continue;
+    }
+
     const category = String(task?.category || "Other").trim() || "Other";
     const minutes = Number(task?.minutes) || 0;
     totalMinutes += minutes;
@@ -2297,7 +2319,8 @@ function buildClientReports(amcRows, taskEntries, reportMonth = "") {
         ...task,
         description: getDisplayTaskDescription(task.description),
       }));
-      const categorySummary = buildTaskCategorySummary(normalizedTasks);
+      const reportableTasks = normalizedTasks.filter((task) => task.source !== "auto");
+      const categorySummary = buildTaskCategorySummary(reportableTasks);
       const consumedMinutes = tasks.reduce((sum, task) => sum + task.minutes, 0);
       const consumedHours = consumedMinutes / 60;
       const remainingHours = row.allocatedHours - consumedHours;
@@ -2306,7 +2329,7 @@ function buildClientReports(amcRows, taskEntries, reportMonth = "") {
       const usageBand = remainingHours < 0 ? "red" : remainingPct <= 20 ? "orange" : "green";
       const amcStatus = isExpired(row.endDateComparable) ? "Expired" : "Active";
       const topTaskCategory = categorySummary[0]?.category || "Other";
-      const classifiedTaskCount = normalizedTasks.filter((task) => task.category && task.category !== "Other").length;
+      const classifiedTaskCount = reportableTasks.filter((task) => task.category && task.category !== "Other").length;
 
       return {
         ...row,
@@ -2651,8 +2674,9 @@ function renderSummaryCards(reports) {
     { clients: 0, allocated: 0, consumed: 0, remaining: 0 },
   );
   const allTasks = reports.flatMap((report) => report.tasks || []);
-  const taskCategorySummary = buildTaskCategorySummary(allTasks);
-  const totalClassifiedTasks = allTasks.filter((task) => task.category && task.category !== "Other").length;
+  const reportableTasks = allTasks.filter((task) => task.source !== "auto");
+  const taskCategorySummary = buildTaskCategorySummary(reportableTasks);
+  const totalClassifiedTasks = reportableTasks.filter((task) => task.category && task.category !== "Other").length;
   const topTaskCategory = taskCategorySummary[0]?.category || "No tasks yet";
 
   const cards = [
@@ -2745,7 +2769,7 @@ function closeModal() {
 
 function renderClientModal(report) {
   const sortedTasks = [...report.tasks].sort(compareTasksByDateDescending);
-  const categorySummary = report.taskCategorySummary || buildTaskCategorySummary(sortedTasks);
+  const categorySummary = report.taskCategorySummary || buildTaskCategorySummary(sortedTasks.filter((task) => task.source !== "auto"));
   const reportPeriodLine = state.reportMonth
     ? `<p class="subtle">Report Period: ${escapeHtml(formatReportMonthLabel(state.reportMonth))}</p>`
     : "";
@@ -2898,7 +2922,7 @@ async function generateSummaryPdf() {
     { allocated: 0, consumed: 0, remaining: 0 },
   );
   const overallTasks = state.reports.flatMap((report) => report.tasks || []);
-  const overallCategorySummary = buildTaskCategorySummary(overallTasks).slice(0, 3);
+  const overallCategorySummary = buildTaskCategorySummary(overallTasks.filter((task) => task.source !== "auto")).slice(0, 3);
 
   doc.setFontSize(10.5);
   doc.setTextColor(78, 90, 104);
@@ -3135,7 +3159,7 @@ async function drawReferenceStyleClientPdfHeader(doc, report, { logoDataUrl = ""
     doc.text(item[2], x + 3.2, y + 26.2);
   });
 
-  const categorySummary = report.taskCategorySummary || buildTaskCategorySummary(report.tasks || []);
+  const categorySummary = report.taskCategorySummary || buildTaskCategorySummary((report.tasks || []).filter((task) => task.source !== "auto"));
   const categoryTitleY = statsTop + statCardHeight + 8;
   let activityTitleY = categoryTitleY;
 

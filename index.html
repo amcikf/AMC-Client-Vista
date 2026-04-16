@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="AMC Hours Tracking and Reporting">
+  <meta name="theme-color" content="#0f766e">
+  <title>AMC Hours Tracking and Reporting</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css?v=20260453">
+  <script>
+    (async () => {
+      const appVersion = "20260453";
+      const storageKey = "amc.appVersion.v1";
+      if (window.localStorage.getItem(storageKey) !== appVersion) {
+        window.localStorage.setItem(storageKey, appVersion);
+        try {
+          if ("serviceWorker" in navigator) {
+            const registrations = await navigator.serviceWorker.getRegistrations();
+            await Promise.all(registrations.map((registration) => registration.unregister()));
+          }
+        } catch (error) {
+          console.warn("Service worker cleanup skipped.", error);
+        }
+        try {
+          if ("caches" in window) {
+            const keys = await caches.keys();
+            await Promise.all(keys.map((key) => caches.delete(key)));
+          }
+        } catch (error) {
+          console.warn("Cache cleanup skipped.", error);
+        }
+      }
+    })();
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
+  <script defer src="./app.js?v=20260453"></script>
+</head>
+<body>
+  <div class="page-bg" aria-hidden="true">
+    <span class="page-orb page-orb-a"></span>
+    <span class="page-orb page-orb-b"></span>
+    <span class="page-grid"></span>
+  </div>
+
+  <div class="page-shell">
+    <div class="topbar">
+      <div class="brand-lockup">
+        <span class="brand-mark">AMC</span>
+        <div>
+          <p class="brand-name">AMC Hours Tracker</p>
+          <p class="brand-subtitle">Published sources, client-side reporting</p>
+        </div>
+      </div>
+      <div class="topbar-note">
+        <span class="topbar-dot"></span>
+        Published links ready
+      </div>
+    </div>
+
+    <header class="hero">
+      <div>
+        <p class="eyebrow">Client-side AMC reporting</p>
+        <h1>AMC Hours Tracking and Reporting</h1>
+        <p class="hero-copy">
+          Use published AMC and task sources, calculate client-wise utilization in the browser, and export clean
+          corporate PDF reports without a backend or database.
+        </p>
+        <div class="hero-badges" aria-label="Highlights">
+          <span class="hero-badge">Client-side only</span>
+          <span class="hero-badge">PDF export ready</span>
+          <span class="hero-badge">Published sources</span>
+        </div>
+      </div>
+      <div class="hero-panel">
+        <div class="hero-stat">
+          <span>Processing</span>
+          <strong>100% Client-Side</strong>
+        </div>
+        <div class="hero-stat">
+          <span>Storage</span>
+          <strong>Local Browser Memory</strong>
+        </div>
+        <div class="hero-stat">
+          <span>Exports</span>
+          <strong>Summary + Client PDF</strong>
+        </div>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="panel workspace-panel">
+        <div class="workspace-topline">
+          <div class="subsection-heading">
+            <h3>Source & Input Workspace</h3>
+            <p>Switch between published links and file uploads without losing any saved settings or report actions.</p>
+          </div>
+          <div class="workspace-tab-rail" role="tablist" aria-label="Workspace sections">
+            <button id="workspaceSourcesTab" class="workspace-tab is-active" type="button" role="tab" aria-selected="true" aria-controls="workspaceSourcesPanel">
+              Sources
+            </button>
+            <button id="workspaceInputsTab" class="workspace-tab" type="button" role="tab" aria-selected="false" aria-controls="workspaceInputsPanel">
+              Inputs
+            </button>
+          </div>
+        </div>
+
+        <div class="workspace-panels">
+          <section id="workspaceSourcesPanel" class="workspace-panel-pane is-active" role="tabpanel" aria-labelledby="workspaceSourcesTab">
+            <div class="workspace-block workspace-block-wide">
+              <div class="subsection-heading">
+                <h3>Published Sources</h3>
+                <p>Paste the published AMC sheet and daily task doc URLs once. The app reuses them on refresh.</p>
+              </div>
+
+              <div class="drive-grid">
+                <label class="drive-field">
+                  <span class="drive-label">AMC Published Sheet URL</span>
+                  <div class="drive-field-row">
+                    <input id="amcDriveInput" type="text" placeholder="Paste published sheet URL">
+                    <div class="drive-field-actions">
+                      <button id="openAmcDriveBtn" class="btn btn-secondary btn-compact" type="button">Open Sheet</button>
+                    </div>
+                  </div>
+                </label>
+
+                <label class="drive-field">
+                  <span class="drive-label">Task Published Doc URL</span>
+                  <div class="drive-field-row">
+                    <input id="taskDriveInput" type="text" placeholder="Paste published doc URL">
+                    <div class="drive-field-actions">
+                      <button id="openTaskDriveBtn" class="btn btn-secondary btn-compact" type="button">Open Doc</button>
+                    </div>
+                  </div>
+                </label>
+
+                <label class="drive-field drive-field-wide">
+                  <span class="drive-label">AMC Alert Recipient Email</span>
+                  <input id="alertRecipientEmailInput" type="email" placeholder="name@company.com">
+                  <p class="drive-note" style="margin:0;">AMC expiry emails will go to this address when an AMC end date is within the next 5 days.</p>
+                </label>
+
+              </div>
+
+              <div class="action-row drive-actions">
+                <button id="saveDriveConfigBtn" class="btn btn-primary" type="button">Save Sources</button>
+                <button id="clearDriveConfigBtn" class="btn btn-secondary" type="button">Clear Sources</button>
+                <button id="restoreDefaultsBtn" class="btn btn-secondary" type="button">Restore Published Defaults</button>
+              </div>
+
+              <div class="drive-source-info" aria-label="Published source notes">
+                <span class="source-pill">Direct published URLs</span>
+                <span class="source-pill">Stored only in this browser</span>
+                <span class="source-pill">No backend auth needed</span>
+              </div>
+
+              <p id="driveStatus" class="drive-status">Sources sync: loading...</p>
+              <p class="drive-note">Published links are preferred. If you swap the source links later, save them once and the app will reuse them automatically.</p>
+            </div>
+          </section>
+
+          <section id="workspaceInputsPanel" class="workspace-panel-pane" role="tabpanel" aria-labelledby="workspaceInputsTab" hidden>
+            <div class="workspace-block workspace-block-wide workspace-inputs-block">
+              <div class="subsection-heading">
+                <h3>Inputs</h3>
+                <p>Select both files and generate the report.</p>
+              </div>
+
+              <div class="upload-grid">
+                <div class="upload-card">
+                  <span class="upload-step">Section 1</span>
+                  <label class="upload-card-title" for="amcFile">
+                    <strong>Upload AMC Excel File</strong>
+                    <span class="upload-help">Supported: `.xlsx`, `.xls`</span>
+                  </label>
+                  <input id="amcFile" type="file" accept=".xlsx,.xls,.xlsm,.xlsb">
+                  <div class="upload-card-actions">
+                    <span id="amcFileName" class="file-name">No file selected</span>
+                    <button id="watchAmcFileBtn" class="btn btn-secondary btn-compact" type="button">Live Watch</button>
+                  </div>
+                </div>
+
+                <div class="upload-card">
+                  <span class="upload-step">Section 2</span>
+                  <label class="upload-card-title" for="taskFile">
+                    <strong>Upload Daily Task TXT File</strong>
+                    <span class="upload-help">Format: `Date | Client | Task | Minutes`</span>
+                  </label>
+                  <input id="taskFile" type="file" accept=".txt,text/plain">
+                  <div class="upload-card-actions">
+                    <span id="taskFileName" class="file-name">No file selected</span>
+                    <button id="watchTaskFileBtn" class="btn btn-secondary btn-compact" type="button">Live Watch</button>
+                  </div>
+                </div>
+              </div>
+
+              <p class="drive-note">Live Watch keeps the current report updated automatically when the selected local file is saved again. The normal upload button still works the same way.</p>
+              <p id="autoRefreshStatus" class="auto-refresh-status" aria-live="polite">Auto-refresh: off</p>
+
+              <div class="report-filter-strip">
+                <label class="report-filter-field">
+                  <span class="drive-label">Report Month</span>
+                  <input id="reportMonthInput" type="month">
+                </label>
+                <p class="report-filter-note">Leave blank to generate a full report for all months.</p>
+              </div>
+
+              <div class="action-row">
+                <button id="generateBtn" class="btn btn-primary">Generate Report</button>
+                <button id="aiParseBtn" class="btn btn-secondary">AI Parse TXT</button>
+                <button id="summaryPdfBtn" class="btn btn-secondary" disabled>Generate All Clients Summary PDF</button>
+              </div>
+
+              <div id="messageBox" class="message-box" aria-live="polite"></div>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <section id="reportSection" class="report-section hidden">
+        <p id="reportScopeNote" class="report-scope-note"></p>
+        <div class="summary-grid" id="summaryCards"></div>
+
+        <section class="panel table-panel">
+          <div class="section-heading section-heading-inline">
+            <div>
+              <h2>Client Utilization Summary</h2>
+              <p>Click a row to inspect detailed tasks and export an individual PDF.</p>
+            </div>
+            <div class="table-search">
+              <label for="clientSearchInput" class="table-search-label">Search Client</label>
+              <input id="clientSearchInput" type="search" placeholder="Type client name" autocomplete="off">
+            </div>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Client Name</th>
+                  <th>AMC Start Date</th>
+                  <th>AMC End Date</th>
+                  <th>Allocated Hours</th>
+                  <th>Consumed Hours</th>
+                  <th>Remaining Hours</th>
+                  <th>Usage %</th>
+                  <th>AMC Status</th>
+                </tr>
+              </thead>
+              <tbody id="reportTableBody"></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+    </main>
+  </div>
+
+  <div id="detailModal" class="modal hidden" aria-hidden="true" role="dialog" aria-modal="true">
+    <div class="modal-backdrop" data-close-modal="true"></div>
+    <div class="modal-card">
+      <button class="modal-close" id="closeModalBtn" aria-label="Close detail view">&times;</button>
+      <div id="modalContent"></div>
+    </div>
+  </div>
+</body>
+</html>

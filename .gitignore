@@ -1,5 +1,6 @@
 node_modules/
 .vercel/
+.vercel-output-test*/
 *.log
 amc-alert-config.json
 amc-alert-state.json

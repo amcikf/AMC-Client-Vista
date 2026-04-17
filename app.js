@@ -4,6 +4,7 @@ const state = {
   clientMap: new Map(),
   reports: [],
   selectedClient: null,
+  clientModalMonth: "",
   searchQuery: "",
   reportMonth: "",
   alertRecipientEmail: "",
@@ -2869,6 +2870,7 @@ function openClientModal(clientKey) {
   }
 
   state.selectedClient = report;
+  state.clientModalMonth = isValidReportMonth(state.reportMonth) ? state.reportMonth : "";
   renderClientModal(report);
   elements.detailModal.classList.remove("hidden");
   elements.detailModal.setAttribute("aria-hidden", "false");
@@ -2881,12 +2883,54 @@ function closeModal() {
   document.body.style.overflow = "";
 }
 
+function buildClientMonthOptions(report) {
+  return getMonthKeysBetween(report.startDateComparable, report.endDateComparable);
+}
+
+function getClientModalMonth(report) {
+  const monthOptions = buildClientMonthOptions(report);
+  if (isValidReportMonth(state.clientModalMonth) && monthOptions.includes(state.clientModalMonth)) {
+    return state.clientModalMonth;
+  }
+  if (isValidReportMonth(state.reportMonth) && monthOptions.includes(state.reportMonth)) {
+    return state.reportMonth;
+  }
+  return "";
+}
+
+function getClientModalTasks(report, month = "") {
+  const reportableTasks = (report.tasks || []).filter((task) => task.source !== "auto");
+  if (!isValidReportMonth(month)) {
+    return reportableTasks;
+  }
+
+  return reportableTasks.filter((task) => isDateInReportMonth(task.date, month));
+}
+
 function renderClientModal(report) {
-  const sortedTasks = [...report.tasks].sort(compareTasksByDateDescending);
-  const categorySummary = report.taskCategorySummary || buildTaskCategorySummary(sortedTasks.filter((task) => task.source !== "auto"));
+  const monthOptions = buildClientMonthOptions(report);
+  const selectedMonth = getClientModalMonth(report);
+  const clientTasks = getClientModalTasks(report, selectedMonth);
+  const categorySummary = buildTaskCategorySummary(clientTasks);
+  const selectedMonthLabel = selectedMonth ? formatReportMonthLabel(selectedMonth) : "All Months";
   const reportPeriodLine = state.reportMonth
     ? `<p class="subtle">Report Period: ${escapeHtml(formatReportMonthLabel(state.reportMonth))}</p>`
     : "";
+  const monthDropdownMarkup = `
+    <div class="modal-month-filter">
+      <label class="report-filter-field modal-month-field">
+        <span class="drive-label">Month View</span>
+        <select id="clientMonthInput" class="report-month-select">
+          <option value="">All Months</option>
+          ${monthOptions
+            .map((monthKey) => `<option value="${monthKey}" ${monthKey === selectedMonth ? "selected" : ""}>${escapeHtml(formatReportMonthLabel(monthKey))}</option>`)
+            .join("")}
+        </select>
+      </label>
+      <p class="report-filter-note modal-month-note">Select a month to show only that month’s tasks and export the same month in PDF.</p>
+      <p class="subtle modal-month-scope">Viewing: ${escapeHtml(selectedMonthLabel)}</p>
+    </div>
+  `;
   const categorySummaryMarkup = categorySummary.length
     ? `
       <section class="category-summary">
@@ -2911,12 +2955,13 @@ function renderClientModal(report) {
         <h2 class="modal-title">${escapeHtml(report.clientName)}</h2>
         <p class="subtle">AMC Period: ${escapeHtml(report.startDateDisplay)} to ${escapeHtml(formatAmcEndDateDisplay(report.endDateDisplay, report.endDateComparable))}</p>
         ${reportPeriodLine}
+        ${monthDropdownMarkup}
       </div>
       <div>
         <span class="pill ${report.amcStatus === "Expired" ? "expired" : report.usageBand === "green" ? "active" : "warning"}">
           ${escapeHtml(report.amcStatus)}
         </span>
-        <button id="clientPdfBtn" class="btn btn-primary" title="Export a PDF that contains only this client’s tasks and totals.">Generate Individual Client PDF</button>
+        <button id="clientPdfBtn" class="btn btn-primary" title="Export a PDF for the month currently selected in this popup.">Generate Individual Client PDF</button>
       </div>
     </div>
 
@@ -2961,8 +3006,9 @@ function renderClientModal(report) {
         </thead>
         <tbody>
           ${
-            sortedTasks.length
-              ? sortedTasks
+            clientTasks.length
+              ? [...clientTasks]
+                  .sort(compareTasksByDateDescending)
                   .map(
                     (task) => `
                       <tr>
@@ -2978,7 +3024,7 @@ function renderClientModal(report) {
                   .join("")
               : `
                 <tr>
-                  <td colspan="4">No task entries were found for this client in the uploaded TXT file.</td>
+                  <td colspan="4">No task entries were found for this client in the selected month.</td>
                 </tr>
               `
           }
@@ -3002,7 +3048,12 @@ function renderClientModal(report) {
     </section>
   `;
 
-  document.getElementById("clientPdfBtn").addEventListener("click", () => generateClientPdf(report));
+  document.getElementById("clientMonthInput")?.addEventListener("change", (event) => {
+    state.clientModalMonth = isValidReportMonth(event.target.value) ? event.target.value : "";
+    renderClientModal(report);
+  });
+
+  document.getElementById("clientPdfBtn").addEventListener("click", () => generateClientPdf(report, getClientModalMonth(report)));
 }
 
 async function generateSummaryPdf() {
@@ -3088,16 +3139,21 @@ async function generateSummaryPdf() {
   doc.save(`amc-hours-summary${periodSlug}-${timestampSlug()}.pdf`);
 }
 
-async function generateClientPdf(report) {
+async function generateClientPdf(report, month = "") {
   if (!isPdfReady()) {
     showMessage("PDF library is not available yet. Please wait a moment and try again.", true);
     return;
   }
 
   const doc = createPdfDocument("portrait");
-  const reportPeriodLabel = state.reportMonth
-    ? formatReportMonthLabel(state.reportMonth)
-    : `${report.startDateDisplay} - ${formatAmcEndDateDisplay(report.endDateDisplay, report.endDateComparable)}`;
+  const selectedMonth = isValidReportMonth(month) ? month : "";
+  const reportPeriodLabel = selectedMonth
+    ? formatReportMonthLabel(selectedMonth)
+    : state.reportMonth
+      ? formatReportMonthLabel(state.reportMonth)
+      : `${report.startDateDisplay} - ${formatAmcEndDateDisplay(report.endDateDisplay, report.endDateComparable)}`;
+  const clientTasks = getClientModalTasks(report, selectedMonth);
+  const totalMinutes = clientTasks.reduce((sum, task) => sum + task.minutes, 0);
   const logoDataUrl = await getIkfLogoDataUrl();
   const clientHeaderBottom = await drawReferenceStyleClientPdfHeader(doc, report, {
     logoDataUrl,
@@ -3107,8 +3163,8 @@ async function generateClientPdf(report) {
   doc.autoTable({
     startY: clientHeaderBottom + 4,
     head: [["DATE", "DESCRIPTION", "TYPE", "MIN"]],
-    body: report.tasks.length
-      ? [...report.tasks].sort(compareTasksByDateDescending).map((task) => [
+    body: clientTasks.length
+      ? [...clientTasks].sort(compareTasksByDateDescending).map((task) => [
           task.date,
           getDisplayTaskDescription(task.description),
           getTaskTypeLabel(task.description),
@@ -3132,10 +3188,10 @@ async function generateClientPdf(report) {
   const finalY = doc.lastAutoTable.finalY + 8;
   doc.setFontSize(10);
   doc.setTextColor(70, 82, 96);
-  doc.text(`Total Minutes: ${formatMinutes(report.consumedMinutes)}`, 14, finalY);
-  doc.text(`Total Hours: ${formatHours(report.consumedMinutes / 60)}`, 14, finalY + 6);
+  doc.text(`Total Minutes: ${formatMinutes(totalMinutes)}`, 14, finalY);
+  doc.text(`Total Hours: ${formatHours(totalMinutes / 60)}`, 14, finalY + 6);
 
-  const periodSlug = state.reportMonth ? `-${slugify(reportPeriodLabel)}` : "-all-months";
+  const periodSlug = selectedMonth ? `-${slugify(reportPeriodLabel)}` : "-all-months";
   doc.save(`${slugify(report.clientName)}-amc-report${periodSlug}-${timestampSlug()}.pdf`);
 }
 
@@ -3933,7 +3989,7 @@ async function registerServiceWorker() {
   }
 
   try {
-    await navigator.serviceWorker.register("./sw.js?v=20260460");
+    await navigator.serviceWorker.register("./sw.js?v=20260461");
   } catch (error) {
     console.warn("Service worker registration skipped.", error);
   }

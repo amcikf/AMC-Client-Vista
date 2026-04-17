@@ -1216,6 +1216,30 @@ tbody td:nth-child(7) {
   min-width: 0;
 }
 
+.modal-month-filter {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+  padding: 12px 14px;
+  max-width: 420px;
+  border-radius: 18px;
+  border: 1px solid rgba(31, 95, 157, 0.12);
+  background: linear-gradient(180deg, rgba(31, 95, 157, 0.06), rgba(255, 255, 255, 0.86));
+}
+
+.modal-month-field {
+  gap: 6px;
+}
+
+.modal-month-note {
+  margin: 0;
+}
+
+.modal-month-scope {
+  margin: 0;
+  font-size: 0.84rem;
+}
+
 .modal-card .detail-actions > div:last-child {
   display: flex;
   align-items: center;

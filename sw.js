@@ -1,5 +1,5 @@
-const CACHE_NAME = "amc-hours-tracker-v60";
-const CORE_ASSETS = ["./", "./index.html", "./styles.css?v=20260460", "./IKF.png?v=20260447", "./app.js?v=20260460"];
+const CACHE_NAME = "amc-hours-tracker-v61";
+const CORE_ASSETS = ["./", "./index.html", "./styles.css?v=20260461", "./IKF.png?v=20260447", "./app.js?v=20260461"];
 const EXTERNAL_ASSETS = [
   "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js",
   "https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js",

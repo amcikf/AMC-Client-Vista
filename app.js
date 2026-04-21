@@ -826,6 +826,23 @@ function isDateInReportMonth(value, reportMonth) {
   return monthKey === reportMonth;
 }
 
+function isDateWithinAmcPeriod(value, startComparable, endComparable) {
+  const parsed = normalizeDateComparable(value);
+  if (Number.isNaN(parsed)) {
+    return false;
+  }
+
+  if (!Number.isNaN(startComparable) && parsed < startComparable) {
+    return false;
+  }
+
+  if (!Number.isNaN(endComparable) && parsed > endComparable) {
+    return false;
+  }
+
+  return true;
+}
+
 function getMonthKeysBetween(startComparable, endComparable) {
   if (Number.isNaN(startComparable) || Number.isNaN(endComparable)) {
     return [];
@@ -2395,7 +2412,15 @@ function buildClientReports(amcRows, taskEntries, reportMonth = "") {
 
   allTaskEntries.forEach((task) => {
     const matchedRow = resolveClientRowForTask(clientIndex, task.clientKey, task.clientName, task.description);
-    const groupKey = matchedRow?.clientKey || task.clientKey;
+    if (!matchedRow) {
+      return;
+    }
+
+    if (!isDateWithinAmcPeriod(task.date, matchedRow.startDateComparable, matchedRow.endDateComparable)) {
+      return;
+    }
+
+    const groupKey = matchedRow.clientKey;
 
     if (!groupedTasks.has(groupKey)) {
       groupedTasks.set(groupKey, []);

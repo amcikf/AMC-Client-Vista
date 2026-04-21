@@ -453,9 +453,10 @@ async function generateReportFromSources({ useAi = false, groqApiKey = "" } = {}
       resolveSourceText(taskFile, "task", normalizedConfig.taskFileId, { kind: "Task TXT" }),
     ]);
     const localTaskEntries = parseTaskContent(taskContent);
-    const taskEntries = useAi
+    const mergedTaskEntries = useAi
       ? mergeTaskEntries(localTaskEntries, await parseTaskFileWithAI(taskContent, amcRows, groqApiKey))
       : localTaskEntries;
+    const taskEntries = normalizeTaskEntries(mergedTaskEntries);
     state.amcRows = amcRows;
     state.taskEntries = taskEntries;
     const reports = buildClientReports(amcRows, taskEntries, reportMonth);
@@ -1883,6 +1884,7 @@ async function parseTaskFileWithAI(content, amcRows, groqApiKey) {
     "- If no explicit duration exists, apply these defaults: blog upload/update = 45, banner upload/update/replace/add = 30, VAPT = 120, file upload = 30, otherwise 30.",
     "- Preserve the client heading as written in TXT. Examples may be 'mitbio -', 'praj -', or a URL/domain.",
     "- A project may have multiple task lines under the same date and client; return each task separately.",
+    "- Do not split one task block into multiple tasks just because it contains URLs, redirects, robots.txt rules, or multi-line notes. Keep those lines together in one description when they belong to the same bullet/item.",
     "- Use the full TXT structure as-is. Do not invent new tasks.",
     `AMC client hints: ${clientHints.join(" | ")}`,
     "TXT content:",
@@ -2373,6 +2375,192 @@ function mergeTaskEntries(primaryTasks, secondaryTasks) {
   }
 
   return [...merged.values()];
+}
+
+function normalizeTaskEntries(taskEntries = []) {
+  return collapseFragmentedTaskEntries(taskEntries);
+}
+
+function collapseFragmentedTaskEntries(taskEntries = []) {
+  const grouped = new Map();
+
+  for (const task of taskEntries) {
+    const key = `${normalizeDateKey(task?.date)}|${normalizeClientKey(task?.clientName)}`;
+    if (!grouped.has(key)) {
+      grouped.set(key, []);
+    }
+    grouped.get(key).push(task);
+  }
+
+  const normalizedTasks = [];
+  for (const tasks of grouped.values()) {
+    if (tasks.length <= 1) {
+      normalizedTasks.push(...tasks);
+      continue;
+    }
+
+    const collapsed = collapseTaskGroup(tasks);
+    normalizedTasks.push(...collapsed);
+  }
+
+  return normalizedTasks;
+}
+
+function collapseTaskGroup(tasks = []) {
+  const orderedTasks = [...tasks];
+  const anchor = findTaskGroupAnchor(orderedTasks);
+  if (anchor) {
+    const mergedTask = orderedTasks.reduce((result, task) => {
+      if (task === anchor) {
+        return result;
+      }
+
+      if (isMergedFragmentOfTask(anchor, task)) {
+        return mergeTaskFragment(result, task);
+      }
+
+      return result;
+    }, anchor);
+
+    const output = [];
+    for (const task of orderedTasks) {
+      if (task === anchor) {
+        output.push(mergedTask);
+        continue;
+      }
+
+      if (isMergedFragmentOfTask(anchor, task)) {
+        continue;
+      }
+
+      output.push(task);
+    }
+
+    return output;
+  }
+
+  const merged = [];
+  for (const task of orderedTasks) {
+    const previous = merged[merged.length - 1];
+    if (previous && shouldMergeTaskFragment(previous, task)) {
+      merged[merged.length - 1] = mergeTaskFragment(previous, task);
+      continue;
+    }
+
+    merged.push(task);
+  }
+
+  return merged;
+}
+
+function findTaskGroupAnchor(tasks = []) {
+  let bestTask = null;
+  let bestScore = 0;
+
+  for (const candidate of tasks) {
+    const candidateText = compactTaskText(candidate?.description);
+    if (!candidateText || candidateText.length < 80) {
+      continue;
+    }
+
+    let matchCount = 0;
+    let coveredLength = 0;
+    for (const other of tasks) {
+      if (other === candidate) {
+        continue;
+      }
+
+      const otherText = compactTaskText(other?.description);
+      if (!otherText || otherText === candidateText) {
+        continue;
+      }
+
+      if (candidateText.includes(otherText)) {
+        matchCount += 1;
+        coveredLength += otherText.length;
+      }
+    }
+
+    if (!matchCount) {
+      continue;
+    }
+
+    const score = coveredLength + matchCount * 50 + candidateText.length;
+    if (score > bestScore) {
+      bestScore = score;
+      bestTask = candidate;
+    }
+  }
+
+  return bestTask;
+}
+
+function isMergedFragmentOfTask(anchorTask, fragmentTask) {
+  const anchorText = compactTaskText(anchorTask?.description);
+  const fragmentText = compactTaskText(fragmentTask?.description);
+  if (!anchorText || !fragmentText || anchorText === fragmentText) {
+    return false;
+  }
+
+  return anchorText.includes(fragmentText);
+}
+
+function shouldMergeTaskFragment(previousTask, currentTask) {
+  if (!previousTask || !currentTask) {
+    return false;
+  }
+
+  const sameDate = normalizeDateKey(previousTask.date) === normalizeDateKey(currentTask.date);
+  const sameClient = normalizeClientKey(previousTask.clientName) === normalizeClientKey(currentTask.clientName);
+  if (!sameDate || !sameClient) {
+    return false;
+  }
+
+  const previousText = String(previousTask.description ?? "").trim();
+  const currentText = String(currentTask.description ?? "").trim();
+  if (!previousText || !currentText || currentText.length > 180) {
+    return false;
+  }
+
+  if (/^[a-z]+:\/\/|^www\./i.test(currentText)) {
+    return true;
+  }
+
+  if (
+    /^(redirect to|make\s+https?:\/\/|make\s+www\.|update the robots\.txt|robots\.txt|privacy-policy|noindex|nofollow|kindly|please)\b/i.test(
+      currentText,
+    )
+  ) {
+    return true;
+  }
+
+  return /https?:\/\/|www\.|robots\.txt|noindex|nofollow|redirect to/i.test(currentText);
+}
+
+function mergeTaskFragment(previousTask, currentTask) {
+  const previousDescription = String(previousTask?.description ?? "").trimEnd();
+  const currentDescription = String(currentTask?.description ?? "").trim();
+  const separator = previousDescription.endsWith("\n") ? "" : "\n";
+  const mergedDescription = `${previousDescription}${separator}${currentDescription}`.trim();
+
+  return createTaskEntry(
+    previousTask.date,
+    previousTask.clientName,
+    mergedDescription,
+    previousTask.minutes,
+    mergedDescription,
+    previousTask.source || currentTask.source || "local",
+  );
+}
+
+function compactTaskText(value) {
+  return String(value ?? "")
+    .toLowerCase()
+    .replace(/\r?\n+/g, " ")
+    .replace(/\s+/g, " ")
+    .replace(/[“”"'`]/g, "")
+    .replace(/\s*([:;,.!?()/-])\s*/g, "$1")
+    .trim();
 }
 
 function makeTaskMergeKey(task) {

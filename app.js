@@ -2907,11 +2907,46 @@ function getClientModalTasks(report, month = "") {
   return reportableTasks.filter((task) => isDateInReportMonth(task.date, month));
 }
 
+function buildClientModalReportView(report, month = "") {
+  const selectedMonth = isValidReportMonth(month) ? month : "";
+  const allTasks = report.tasks || [];
+  const reportableTasks = allTasks.filter((task) => task.source !== "auto");
+  const scopedTasks = selectedMonth ? allTasks.filter((task) => isDateInReportMonth(task.date, selectedMonth)) : allTasks;
+  const scopedReportableTasks = selectedMonth
+    ? reportableTasks.filter((task) => isDateInReportMonth(task.date, selectedMonth))
+    : reportableTasks;
+  const categorySummary = buildTaskCategorySummary(scopedReportableTasks);
+  const consumedMinutes = scopedTasks.reduce((sum, task) => sum + task.minutes, 0);
+  const consumedHours = consumedMinutes / 60;
+  const remainingHours = report.allocatedHours - consumedHours;
+  const usagePct = report.allocatedHours === 0 ? 0 : (consumedHours / report.allocatedHours) * 100;
+  const remainingPct = report.allocatedHours === 0 ? 0 : (remainingHours / report.allocatedHours) * 100;
+  const usageBand = remainingHours < 0 ? "red" : remainingPct <= 20 ? "orange" : "green";
+  const topTaskCategory = categorySummary[0]?.category || "Other";
+  const classifiedTaskCount = scopedReportableTasks.filter((task) => task.category && task.category !== "Other").length;
+
+  return {
+    ...report,
+    tasks: scopedTasks,
+    reportableTasks: scopedReportableTasks,
+    taskCategorySummary: categorySummary,
+    topTaskCategory,
+    classifiedTaskCount,
+    consumedMinutes,
+    consumedHours,
+    remainingHours,
+    usagePct,
+    usageBand,
+    selectedMonth,
+  };
+}
+
 function renderClientModal(report) {
   const monthOptions = buildClientMonthOptions(report);
   const selectedMonth = getClientModalMonth(report);
-  const clientTasks = getClientModalTasks(report, selectedMonth);
-  const categorySummary = buildTaskCategorySummary(clientTasks);
+  const modalReport = buildClientModalReportView(report, selectedMonth);
+  const clientTasks = modalReport.reportableTasks || [];
+  const categorySummary = modalReport.taskCategorySummary || [];
   const selectedMonthLabel = selectedMonth ? formatReportMonthLabel(selectedMonth) : "All Months";
   const reportPeriodLine = state.reportMonth
     ? `<p class="subtle">Report Period: ${escapeHtml(formatReportMonthLabel(state.reportMonth))}</p>`
@@ -2958,7 +2993,7 @@ function renderClientModal(report) {
         ${monthDropdownMarkup}
       </div>
       <div>
-        <span class="pill ${report.amcStatus === "Expired" ? "expired" : report.usageBand === "green" ? "active" : "warning"}">
+        <span class="pill ${report.amcStatus === "Expired" ? "expired" : modalReport.usageBand === "green" ? "active" : "warning"}">
           ${escapeHtml(report.amcStatus)}
         </span>
         <button id="clientPdfBtn" class="btn btn-primary" title="Export a PDF for the month currently selected in this popup.">Generate Individual Client PDF</button>
@@ -2972,23 +3007,23 @@ function renderClientModal(report) {
       </article>
       <article class="detail-stat" title="The hours already used by this client’s tasks.">
         <span>Consumed Hours</span>
-        <strong>${escapeHtml(formatHours(report.consumedHours))}</strong>
+        <strong>${escapeHtml(formatHours(modalReport.consumedHours))}</strong>
       </article>
       <article class="detail-stat" title="The hours still available in the AMC.">
         <span>Remaining Hours</span>
-        <strong>${escapeHtml(formatHours(report.remainingHours))}</strong>
+        <strong>${escapeHtml(formatHours(modalReport.remainingHours))}</strong>
       </article>
       <article class="detail-stat" title="How much of the AMC has already been used.">
         <span>Usage %</span>
-        <strong>${escapeHtml(formatPercentage(report.usagePct))}</strong>
+        <strong>${escapeHtml(formatPercentage(modalReport.usagePct))}</strong>
       </article>
       <article class="detail-stat" title="The total task time counted in minutes.">
         <span>Total Minutes</span>
-        <strong>${escapeHtml(formatMinutes(report.consumedMinutes))}</strong>
+        <strong>${escapeHtml(formatMinutes(modalReport.consumedMinutes))}</strong>
       </article>
       <article class="detail-stat" title="The task category with the highest time for this client.">
         <span>Top Category</span>
-        <strong>${escapeHtml(report.topTaskCategory || "Other")}</strong>
+        <strong>${escapeHtml(modalReport.topTaskCategory || "Other")}</strong>
       </article>
     </section>
 
@@ -3035,15 +3070,15 @@ function renderClientModal(report) {
     <section class="totals-bar">
       <article class="detail-stat">
         <span>Total Minutes</span>
-        <strong>${escapeHtml(formatMinutes(report.consumedMinutes))}</strong>
+        <strong>${escapeHtml(formatMinutes(modalReport.consumedMinutes))}</strong>
       </article>
       <article class="detail-stat">
         <span>Total Hours</span>
-        <strong>${escapeHtml(formatHours(report.consumedHours))}</strong>
+        <strong>${escapeHtml(formatHours(modalReport.consumedHours))}</strong>
       </article>
       <article class="detail-stat">
         <span>Remaining Hours</span>
-        <strong>${escapeHtml(formatHours(report.remainingHours))}</strong>
+        <strong>${escapeHtml(formatHours(modalReport.remainingHours))}</strong>
       </article>
     </section>
   `;
@@ -3147,15 +3182,16 @@ async function generateClientPdf(report, month = "") {
 
   const doc = createPdfDocument("portrait");
   const selectedMonth = isValidReportMonth(month) ? month : "";
+  const scopedReport = buildClientModalReportView(report, selectedMonth);
   const reportPeriodLabel = selectedMonth
     ? formatReportMonthLabel(selectedMonth)
     : state.reportMonth
       ? formatReportMonthLabel(state.reportMonth)
       : `${report.startDateDisplay} - ${formatAmcEndDateDisplay(report.endDateDisplay, report.endDateComparable)}`;
-  const clientTasks = getClientModalTasks(report, selectedMonth);
-  const totalMinutes = clientTasks.reduce((sum, task) => sum + task.minutes, 0);
+  const clientTasks = scopedReport.reportableTasks || [];
+  const totalMinutes = scopedReport.consumedMinutes;
   const logoDataUrl = await getIkfLogoDataUrl();
-  const clientHeaderBottom = await drawReferenceStyleClientPdfHeader(doc, report, {
+  const clientHeaderBottom = await drawReferenceStyleClientPdfHeader(doc, scopedReport, {
     logoDataUrl,
     reportPeriodLabel,
   });

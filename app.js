@@ -3450,13 +3450,6 @@ async function drawReferenceStyleClientPdfHeader(doc, report, { logoDataUrl = ""
   const bandHeight = 34;
   const detailsTop = bandHeight + 10;
   const statsTop = 88;
-  const detailLabelY = detailsTop + 7;
-  const detailValueY = detailLabelY + 4.6;
-  const statLabelY = statsTop + 6;
-  const statValueY = statLabelY + 9;
-  const statDescY = statValueY + 11;
-  const detailXs = [marginX, 64, 110, 156];
-  const statXs = [14, 55, 96, 137];
   const lineColor = [219, 225, 232];
   const textDark = [34, 46, 58];
   const textMuted = [98, 111, 126];
@@ -3504,6 +3497,9 @@ async function drawReferenceStyleClientPdfHeader(doc, report, { logoDataUrl = ""
   const detailCardFill = [255, 255, 255];
   const detailLabelColor = [96, 108, 120];
   const detailValueColor = [31, 43, 57];
+  const reportableActivityCount = Array.isArray(report.reportableTasks)
+    ? report.reportableTasks.length
+    : (report.tasks || []).filter((task) => task?.source !== "auto").length;
 
   detailItems.forEach((item, index) => {
     const row = Math.floor(index / 2);
@@ -3538,12 +3534,12 @@ async function drawReferenceStyleClientPdfHeader(doc, report, { logoDataUrl = ""
   const stats = [
     ["TOTAL MINUTES", formatMinutes(report.consumedMinutes), "minutes logged"],
     ["TOTAL HOURS", formatHours(report.consumedMinutes / 60), "hours of service"],
-    ["ACTIVITIES", String(report.tasks.length), "tasks completed"],
+    ["ACTIVITIES", String(reportableActivityCount), "tasks completed"],
   ];
 
-  const statGap = 6;
+  const statGap = 5;
   const statCardWidth = (pageWidth - marginX * 2 - statGap * 2) / 3;
-  const statCardHeight = 28;
+  const statCardHeight = 20;
   const statCardFill = [255, 255, 255];
   const statCardBorder = [224, 229, 235];
   const statShadow = [241, 244, 248];
@@ -3556,26 +3552,26 @@ async function drawReferenceStyleClientPdfHeader(doc, report, { logoDataUrl = ""
     const x = marginX + index * (statCardWidth + statGap);
     const y = statsTop;
     doc.setFillColor(...statShadow);
-    doc.roundedRect(x + 0.7, y + 1.0, statCardWidth, statCardHeight, 2.4, 2.4, "F");
+    doc.roundedRect(x + 0.6, y + 0.8, statCardWidth, statCardHeight, 2.2, 2.2, "F");
     doc.setFillColor(...statCardFill);
     doc.setDrawColor(...statCardBorder);
     doc.setLineWidth(0.2);
-    doc.roundedRect(x, y, statCardWidth, statCardHeight, 2.4, 2.4, "FD");
+    doc.roundedRect(x, y, statCardWidth, statCardHeight, 2.2, 2.2, "FD");
     doc.setFillColor(...statAccent);
-    doc.rect(x, y, statCardWidth, 1.1, "F");
+    doc.rect(x, y, statCardWidth, 0.9, "F");
 
     doc.setTextColor(...statLabelColor);
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(8.6);
-    doc.text(item[0], x + 3.2, y + 7.0);
+    doc.setFontSize(7.5);
+    doc.text(item[0], x + 2.8, y + 5.3);
     doc.setTextColor(...statValueColor);
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(index === 0 ? 19 : 17.5);
-    doc.text(item[1], x + 3.2, y + 19.0);
+    doc.setFontSize(index === 0 ? 14.5 : 13.6);
+    doc.text(item[1], x + 2.8, y + 12.9);
     doc.setTextColor(...statDescColor);
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(7.2);
-    doc.text(item[2], x + 3.2, y + 26.2);
+    doc.setFontSize(6.4);
+    doc.text(item[2], x + 2.8, y + 17.3);
   });
 
   const categorySummary = report.taskCategorySummary || buildTaskCategorySummary((report.tasks || []).filter((task) => task.source !== "auto"));
@@ -3624,7 +3620,7 @@ async function drawReferenceStyleClientPdfHeader(doc, report, { logoDataUrl = ""
   doc.setFont("helvetica", "normal");
   doc.setTextColor(113, 123, 134);
   doc.setFontSize(8.6);
-  doc.text(`- ${report.tasks.length} entries | ${reportPeriodLabel}`, marginX + 25, activityTitleY);
+  doc.text(`- ${reportableActivityCount} entries | ${reportPeriodLabel}`, marginX + 25, activityTitleY);
 
   return activitySubY + 4;
 }

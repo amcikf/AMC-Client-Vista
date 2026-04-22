@@ -1448,26 +1448,55 @@ function extractPublishedDocText(html) {
   }
 
   if (typeof DOMParser === "undefined") {
-    return text.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+    return decodeHtmlEntities(text.replace(/<[^>]+>/g, "\n")).replace(/\r/g, "").trim();
   }
 
   const doc = new DOMParser().parseFromString(text, "text/html");
   const contents = doc.querySelector("#contents");
   if (contents) {
     const lines = Array.from(contents.querySelectorAll("p, li, tr, h1, h2, h3, h4, h5, h6"))
-      .map((node) => String(node.textContent || "").replace(/\s+/g, " ").trim())
+      .map((node) => preserveTaskDescription(node.textContent || ""))
       .filter(Boolean);
     if (lines.length) {
       return lines.join("\n");
     }
-    const contentsText = String(contents.textContent || "").replace(/\s+\n/g, "\n").trim();
+    const contentsText = preserveTaskDescription(contents.textContent || "");
     if (contentsText) {
       return contentsText;
     }
   }
 
   const body = doc.body;
-  return String(body?.textContent || text).replace(/\s+\n/g, "\n").trim();
+  return preserveTaskDescription(body?.textContent || text);
+}
+
+function decodeHtmlEntities(value) {
+  const text = String(value ?? "");
+  if (!text) {
+    return "";
+  }
+
+  if (typeof document !== "undefined" && document.createElement) {
+    const textarea = document.createElement("textarea");
+    textarea.innerHTML = text;
+    return textarea.value;
+  }
+
+  return text
+    .replace(/&quot;/gi, "\"")
+    .replace(/&#39;|&apos;/gi, "'")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&nbsp;/gi, " ");
+}
+
+function preserveTaskDescription(value) {
+  return decodeHtmlEntities(String(value ?? ""))
+    .replace(/\r/g, "")
+    .replace(/\u00a0/g, " ")
+    .replace(/[ \t]+\n/g, "\n")
+    .trim();
 }
 
 function buildDirectGoogleDriveFetchUrl(value, sourceType = "file") {
@@ -2220,7 +2249,7 @@ function inferMinutesSource(description) {
 function createTaskEntry(date, clientName, description, minutes, rawLine, source = "local") {
   const explicitMinutes = extractExplicitMinutes(description);
   const resolvedMinutes = Number.isNaN(explicitMinutes) ? minutes : explicitMinutes;
-  const rawDescription = String(description ?? "").trimEnd();
+  const rawDescription = preserveTaskDescription(description);
   const normalizedDescription = normalizeTaskDescription(rawDescription);
   const taskCategory = classifyTaskCategory(normalizedDescription);
 
@@ -2256,7 +2285,7 @@ function normalizeTaskDescription(description) {
 }
 
 function getDisplayTaskDescription(description) {
-  return String(description ?? "");
+  return preserveTaskDescription(description);
 }
 
 function classifyTaskCategory(description) {
@@ -3421,13 +3450,13 @@ async function generateClientPdf(report, month = "") {
         ])
     : [["-", "No task entries found for this client.", "-", "-"]],
     theme: "grid",
-    styles: { fontSize: 8.2, cellPadding: 3.2, lineColor: [224, 229, 235], lineWidth: 0.1, valign: "top", textColor: [45, 56, 69] },
+    styles: { fontSize: 8.2, cellPadding: 3.2, lineColor: [224, 229, 235], lineWidth: 0.1, valign: "top", textColor: [45, 56, 69], overflow: "linebreak" },
     headStyles: { fillColor: [31, 47, 66], textColor: [255, 255, 255], fontStyle: "bold" },
     alternateRowStyles: { fillColor: [250, 251, 253] },
     margin: { left: 14, right: 14 },
     columnStyles: {
       0: { cellWidth: 30, halign: "left", overflow: "hidden" },
-      1: { cellWidth: "auto" },
+      1: { cellWidth: "auto", overflow: "linebreak" },
       2: { cellWidth: 28, halign: "center" },
       3: { cellWidth: 18, halign: "center" },
     },

@@ -2654,7 +2654,7 @@ function buildClientReports(amcRows, taskEntries, reportMonth = "") {
       }));
       const reportableTasks = normalizedTasks.filter((task) => task.source !== "auto");
       const categorySummary = buildTaskCategorySummary(reportableTasks);
-      const consumedMinutes = tasks.reduce((sum, task) => sum + task.minutes, 0);
+      const consumedMinutes = reportableTasks.reduce((sum, task) => sum + task.minutes, 0);
       const consumedHours = consumedMinutes / 60;
       const remainingHours = row.allocatedHours - consumedHours;
       const usagePct = row.allocatedHours === 0 ? 0 : (consumedHours / row.allocatedHours) * 100;
@@ -3153,12 +3153,11 @@ function buildClientModalReportView(report, month = "") {
   const selectedMonth = isValidReportMonth(month) ? month : "";
   const allTasks = report.tasks || [];
   const reportableTasks = allTasks.filter((task) => task.source !== "auto");
-  const scopedTasks = selectedMonth ? allTasks.filter((task) => isDateInReportMonth(task.date, selectedMonth)) : allTasks;
   const scopedReportableTasks = selectedMonth
     ? reportableTasks.filter((task) => isDateInReportMonth(task.date, selectedMonth))
     : reportableTasks;
   const categorySummary = buildTaskCategorySummary(scopedReportableTasks);
-  const consumedMinutes = scopedTasks.reduce((sum, task) => sum + task.minutes, 0);
+  const consumedMinutes = scopedReportableTasks.reduce((sum, task) => sum + task.minutes, 0);
   const consumedHours = consumedMinutes / 60;
   const remainingHours = report.allocatedHours - consumedHours;
   const usagePct = report.allocatedHours === 0 ? 0 : (consumedHours / report.allocatedHours) * 100;
@@ -3169,7 +3168,7 @@ function buildClientModalReportView(report, month = "") {
 
   return {
     ...report,
-    tasks: scopedTasks,
+    tasks: selectedMonth ? allTasks.filter((task) => isDateInReportMonth(task.date, selectedMonth)) : allTasks,
     reportableTasks: scopedReportableTasks,
     taskCategorySummary: categorySummary,
     topTaskCategory,

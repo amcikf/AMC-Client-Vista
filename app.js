@@ -2184,6 +2184,12 @@ function resolveTaskMinutes(description) {
   }
 
   const text = String(description).toLowerCase();
+  for (const rule of SMART_RULES) {
+    const matchesRule = rule.keywords.some((keyword) => text.includes(String(keyword).toLowerCase()));
+    if (matchesRule) {
+      return rule.minutes;
+    }
+  }
 
   if (text.includes("blog upload") || text.includes("blog update")) {
     return 45;
@@ -2230,6 +2236,9 @@ function inferMinutesSource(description) {
   }
 
   const text = String(description).toLowerCase();
+  if (SMART_RULES.some((rule) => rule.keywords.some((keyword) => text.includes(String(keyword).toLowerCase())))) {
+    return "rule";
+  }
   if (
     text.includes("blog upload") ||
     text.includes("blog update") ||
@@ -3151,25 +3160,21 @@ function getClientModalTasks(report, month = "") {
 
 function buildClientModalReportView(report, month = "") {
   const selectedMonth = isValidReportMonth(month) ? month : "";
-  const allTasks = report.tasks || [];
-  const reportableTasks = allTasks.filter((task) => task.source !== "auto");
-  const scopedReportableTasks = selectedMonth
-    ? reportableTasks.filter((task) => isDateInReportMonth(task.date, selectedMonth))
-    : reportableTasks;
-  const categorySummary = buildTaskCategorySummary(scopedReportableTasks);
-  const consumedMinutes = scopedReportableTasks.reduce((sum, task) => sum + task.minutes, 0);
+  const visibleTasks = getClientModalTasks(report, selectedMonth);
+  const categorySummary = buildTaskCategorySummary(visibleTasks);
+  const consumedMinutes = visibleTasks.reduce((sum, task) => sum + task.minutes, 0);
   const consumedHours = consumedMinutes / 60;
   const remainingHours = report.allocatedHours - consumedHours;
   const usagePct = report.allocatedHours === 0 ? 0 : (consumedHours / report.allocatedHours) * 100;
   const remainingPct = report.allocatedHours === 0 ? 0 : (remainingHours / report.allocatedHours) * 100;
   const usageBand = remainingHours < 0 ? "red" : remainingPct <= 20 ? "orange" : "green";
   const topTaskCategory = categorySummary[0]?.category || "Other";
-  const classifiedTaskCount = scopedReportableTasks.filter((task) => task.category && task.category !== "Other").length;
+  const classifiedTaskCount = visibleTasks.filter((task) => task.category && task.category !== "Other").length;
 
   return {
     ...report,
-    tasks: selectedMonth ? allTasks.filter((task) => isDateInReportMonth(task.date, selectedMonth)) : allTasks,
-    reportableTasks: scopedReportableTasks,
+    tasks: visibleTasks,
+    reportableTasks: visibleTasks,
     taskCategorySummary: categorySummary,
     topTaskCategory,
     classifiedTaskCount,

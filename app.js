@@ -2446,6 +2446,11 @@ function collapseFragmentedTaskEntries(taskEntries = []) {
 
 function collapseTaskGroup(tasks = []) {
   const orderedTasks = [...tasks];
+  const continuationMerged = mergeContinuationOnlyTasks(orderedTasks);
+  if (continuationMerged.length !== orderedTasks.length) {
+    return continuationMerged;
+  }
+
   const anchor = findTaskGroupAnchor(orderedTasks);
   if (anchor) {
     const mergedTask = orderedTasks.reduce((result, task) => {
@@ -2489,6 +2494,64 @@ function collapseTaskGroup(tasks = []) {
   }
 
   return merged;
+}
+
+function mergeContinuationOnlyTasks(tasks = []) {
+  const substantiveTasks = tasks.filter((task) => !isContinuationOnlyTask(task));
+  const continuationTasks = tasks.filter((task) => isContinuationOnlyTask(task));
+
+  if (!continuationTasks.length || !substantiveTasks.length) {
+    return tasks;
+  }
+
+  let primaryTask = substantiveTasks[0];
+  for (const task of substantiveTasks) {
+    if (String(task?.description ?? "").length > String(primaryTask?.description ?? "").length) {
+      primaryTask = task;
+    }
+  }
+
+  let mergedPrimaryTask = primaryTask;
+  for (const task of continuationTasks) {
+    mergedPrimaryTask = mergeTaskFragment(mergedPrimaryTask, task);
+  }
+
+  const output = [];
+  for (const task of tasks) {
+    if (task === primaryTask) {
+      output.push(mergedPrimaryTask);
+      continue;
+    }
+
+    if (continuationTasks.includes(task)) {
+      continue;
+    }
+
+    output.push(task);
+  }
+
+  return output;
+}
+
+function isContinuationOnlyTask(task) {
+  const text = String(task?.description ?? "").trim();
+  if (!text) {
+    return false;
+  }
+
+  if (/^(file\s*name|file\s*path|attachment|attached\s+file|link|url)\s*:/i.test(text)) {
+    return true;
+  }
+
+  if (/^[a-z]+:\/\/|^www\./i.test(text)) {
+    return true;
+  }
+
+  if (/^(investors|regulation|shareholder'?s information|stock exchange)(\b|[^a-z])/i.test(text)) {
+    return true;
+  }
+
+  return false;
 }
 
 function findTaskGroupAnchor(tasks = []) {

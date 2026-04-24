@@ -2560,19 +2560,27 @@ function shouldMergeTaskFragment(previousTask, currentTask) {
     return false;
   }
 
+  if (/^(file\s*name|file\s*path|attachment|attached\s+file|link|url)\s*:/i.test(currentText)) {
+    return true;
+  }
+
+  if (/^(investors|regulation|shareholder'?s information|stock exchange)\b/i.test(currentText)) {
+    return true;
+  }
+
   if (/^[a-z]+:\/\/|^www\./i.test(currentText)) {
     return true;
   }
 
   if (
-    /^(redirect to|make\s+https?:\/\/|make\s+www\.|update the robots\.txt|robots\.txt|privacy-policy|noindex|nofollow|kindly|please)\b/i.test(
+    /^(redirect to|make\s+https?:\/\/|make\s+www\.|update the robots\.txt|robots\.txt|privacy-policy|noindex|nofollow|kindly|please|under the below tab)\b/i.test(
       currentText,
     )
   ) {
     return true;
   }
 
-  return /https?:\/\/|www\.|robots\.txt|noindex|nofollow|redirect to/i.test(currentText);
+  return /https?:\/\/|www\.|robots\.txt|noindex|nofollow|redirect to|file\s*name|file\s*path/i.test(currentText);
 }
 
 function mergeTaskFragment(previousTask, currentTask) {

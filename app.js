@@ -2082,6 +2082,11 @@ function parseStructuredTaskBlocks(content) {
       continue;
     }
 
+    if (currentDate && currentClient && currentTaskLines.length && isTaskContinuationLine(line)) {
+      currentTaskLines.push(line);
+      continue;
+    }
+
     const clientMatch = isClientHeadingLine(line);
     if (clientMatch && currentDate) {
       commitClientTasks();
@@ -2161,6 +2166,10 @@ function isClientHeadingLine(line) {
   }
 
   if (/^\d+\.\s*/.test(text)) {
+    return null;
+  }
+
+  if (isTaskContinuationLine(text)) {
     return null;
   }
 
@@ -3833,6 +3842,31 @@ function parseCalendarDateParts(value) {
   }
 
   return null;
+}
+
+function isTaskContinuationLine(line) {
+  const text = String(line).trim();
+  if (!text) {
+    return false;
+  }
+
+  if (/^(file\s*name|file\s*path|attachment|attached\s+file|link|url)\s*:/i.test(text)) {
+    return true;
+  }
+
+  if (/^[a-z]+:\/\/|^www\./i.test(text)) {
+    return true;
+  }
+
+  if (/^(investors|regulation|shareholder'?s information|stock exchange)(\b|[^a-z])/i.test(text)) {
+    return true;
+  }
+
+  if (/^[A-Za-z][^:]{0,80}:\s+\S+/.test(text)) {
+    return true;
+  }
+
+  return false;
 }
 
 function getTaskTypeLabel(description) {

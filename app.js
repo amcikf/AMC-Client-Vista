@@ -2051,7 +2051,9 @@ function parseStructuredTaskBlocks(content) {
       continue;
     }
 
-    const clientMatch = isClientHeadingLine(line);
+    const clientMatch = isClientHeadingLine(line, {
+      allowLooseMatch: !currentClient || !currentBlockLines.length,
+    });
     if (clientMatch && currentDate) {
       commitClientTasks();
       currentClient = clientMatch;
@@ -2116,7 +2118,8 @@ function isSeparatorLine(line) {
   return /^[-_=|.\s]+$/.test(line) || /^=+$/.test(line);
 }
 
-function isClientHeadingLine(line) {
+function isClientHeadingLine(line, options = {}) {
+  const { allowLooseMatch = true } = options;
   const text = String(line).trim();
   if (!text || isStructuredDateLine(text) || isSeparatorLine(text)) {
     return null;
@@ -2129,6 +2132,10 @@ function isClientHeadingLine(line) {
   const numberedHeading = text.match(/^(?:\d+\)\s*)?(.+?)\s*-\s*$/);
   if (numberedHeading) {
     return numberedHeading[1].trim();
+  }
+
+  if (!allowLooseMatch) {
+    return null;
   }
 
   const looksLikeShortProject = text.length <= 80 && !text.includes("://") && !/\b(min|mins?|hour|hours|hr|hrs)\b/i.test(text);

@@ -2002,17 +2002,17 @@ function parseStructuredTaskBlocks(content) {
   const tasks = [];
   let currentDate = "";
   let currentClient = "";
-  let currentTaskLines = [];
+  let currentBlockLines = [];
 
-  function commitCurrentTask() {
-    if (!currentDate || !currentClient || !currentTaskLines.length) {
-      currentTaskLines = [];
+  function commitCurrentBlock() {
+    if (!currentDate || !currentClient || !currentBlockLines.length) {
+      currentBlockLines = [];
       return;
     }
 
-    const description = currentTaskLines.join("\n").trimEnd();
+    const description = currentBlockLines.join("\n").trimEnd();
     if (!description) {
-      currentTaskLines = [];
+      currentBlockLines = [];
       return;
     }
 
@@ -2027,11 +2027,11 @@ function parseStructuredTaskBlocks(content) {
         "local",
       ),
     );
-    currentTaskLines = [];
+    currentBlockLines = [];
   }
 
   function commitClientTasks() {
-    commitCurrentTask();
+    commitCurrentBlock();
   }
 
   for (const rawLine of lines) {
@@ -2058,18 +2058,11 @@ function parseStructuredTaskBlocks(content) {
       continue;
     }
 
-    const taskMatch = line.match(/^\d+\.\s*(.+)$/);
-    if (taskMatch && currentDate && currentClient) {
-      commitCurrentTask();
-      currentTaskLines = [taskMatch[1].trim()];
-      continue;
-    }
-
     if (currentDate && currentClient) {
-      if (!currentTaskLines.length) {
-        currentTaskLines = [line];
+      if (!currentBlockLines.length) {
+        currentBlockLines = [line];
       } else {
-        currentTaskLines.push(line);
+        currentBlockLines.push(line);
       }
     }
   }

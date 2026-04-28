@@ -94,7 +94,7 @@ let cachedIkfLogoLoadPromise = null;
 
 const SMART_RULES = [
   { keywords: ["banner update", "banner replace", "banner add"], minutes: 45 },
-  { keywords: ["blog update", "blog content and image"], minutes: 45 },
+  { keywords: ["blog update", "blog content and image", "pfa blog content"], minutes: 45 },
   { keywords: ["new page create", "new page design", "create new page"], minutes: 120 },
   { keywords: ["vapt"], minutes: 120 },
   { keywords: ["meta title", "meta description"], minutes: 60 },
@@ -1880,7 +1880,7 @@ async function parseTaskFileWithAI(content, amcRows, groqApiKey) {
     "- Keep description exactly as written. Do not paraphrase or fix grammar.",
     "- Do not skip any dated/client task block.",
     "- If a task line or its block contains an explicit duration like 15min, 60 min, 1 hr, use that exact duration converted to minutes.",
-    "- If no explicit duration exists, apply these defaults: blog upload/update/content and image = 45, banner upload/update/replace/add = 30, VAPT = 120, file upload = 30, otherwise 30.",
+    "- If no explicit duration exists, apply these defaults: blog upload/update/content and image/PFA blog content = 45, banner upload/update/replace/add = 30, VAPT = 120, file upload = 30, otherwise 30.",
     "- Preserve the client heading as written in TXT. Examples may be 'mitbio -', 'praj -', or a URL/domain.",
     "- A project may have multiple task lines under the same date and client; return each task separately.",
     "- Use the full TXT structure as-is. Do not invent new tasks.",
@@ -2206,7 +2206,7 @@ function resolveTaskMinutes(description) {
 
   const text = String(description).toLowerCase();
 
-  if (text.includes("blog upload") || text.includes("blog update") || text.includes("blog content and image")) {
+  if (text.includes("blog upload") || text.includes("blog update") || text.includes("blog content and image") || text.includes("pfa blog content")) {
     return 45;
   }
 
@@ -2255,6 +2255,7 @@ function inferMinutesSource(description) {
     text.includes("blog upload") ||
     text.includes("blog update") ||
     text.includes("blog content and image") ||
+    text.includes("pfa blog content") ||
     text.includes("banner upload") ||
     text.includes("banner update") ||
     text.includes("banner replace") ||

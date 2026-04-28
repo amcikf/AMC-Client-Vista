@@ -2010,23 +2010,24 @@ function parseStructuredTaskBlocks(content) {
       return;
     }
 
-    const description = currentBlockLines.join("\n").trimEnd();
-    if (!description) {
-      currentBlockLines = [];
-      return;
-    }
+    const descriptions = splitStructuredClientTasks(currentBlockLines);
+    for (const description of descriptions) {
+      if (!description) {
+        continue;
+      }
 
-    const minutes = resolveTaskMinutes(description);
-    tasks.push(
-      createTaskEntry(
-        currentDate,
-        currentClient,
-        description,
-        minutes,
-        description,
-        "local",
-      ),
-    );
+      const minutes = resolveTaskMinutes(description);
+      tasks.push(
+        createTaskEntry(
+          currentDate,
+          currentClient,
+          description,
+          minutes,
+          description,
+          "local",
+        ),
+      );
+    }
     currentBlockLines = [];
   }
 
@@ -2036,6 +2037,7 @@ function parseStructuredTaskBlocks(content) {
 
   for (const rawLine of lines) {
     const line = rawLine.trim();
+    const preservedLine = String(rawLine ?? "").replace(/\r/g, "").trimEnd();
     if (!line) {
       continue;
     }
@@ -2062,15 +2064,65 @@ function parseStructuredTaskBlocks(content) {
 
     if (currentDate && currentClient) {
       if (!currentBlockLines.length) {
-        currentBlockLines = [line];
+        currentBlockLines = [preservedLine];
       } else {
-        currentBlockLines.push(line);
+        currentBlockLines.push(preservedLine);
       }
     }
   }
 
   commitClientTasks();
   return tasks;
+}
+
+function splitStructuredClientTasks(lines = []) {
+  const normalizedLines = lines
+    .map((line) => String(line ?? "").replace(/\r/g, "").trimEnd())
+    .filter((line) => line.trim());
+
+  if (!normalizedLines.length) {
+    return [];
+  }
+
+  const numberedLineMeta = normalizedLines
+    .map((line) => ({
+      raw: line,
+      trimmed: line.trim(),
+      indent: getLeadingWhitespaceWidth(line),
+    }))
+    .filter((entry) => /^\d+\.\s+/.test(entry.trimmed));
+
+  if (!numberedLineMeta.length) {
+    return [normalizedLines.join("\n").trim()];
+  }
+
+  const topLevelIndent = Math.min(...numberedLineMeta.map((entry) => entry.indent));
+  const taskDescriptions = [];
+  let currentTaskLines = [];
+
+  for (const line of normalizedLines) {
+    const trimmedLine = line.trim();
+    const isTopLevelTaskStart = /^\d+\.\s+/.test(trimmedLine) && getLeadingWhitespaceWidth(line) <= topLevelIndent;
+
+    if (isTopLevelTaskStart && currentTaskLines.length) {
+      taskDescriptions.push(currentTaskLines.join("\n").trim());
+      currentTaskLines = [trimmedLine];
+      continue;
+    }
+
+    currentTaskLines.push(trimmedLine);
+  }
+
+  if (currentTaskLines.length) {
+    taskDescriptions.push(currentTaskLines.join("\n").trim());
+  }
+
+  return taskDescriptions.filter(Boolean);
+}
+
+function getLeadingWhitespaceWidth(value) {
+  const match = String(value ?? "").match(/^\s*/);
+  return match ? match[0].length : 0;
 }
 
 function splitTaskLine(line) {

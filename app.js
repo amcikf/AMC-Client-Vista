@@ -2308,7 +2308,7 @@ function normalizeTaskDescription(description) {
 }
 
 function getDisplayTaskDescription(description) {
-  return String(description ?? "");
+  return stripLeadingTaskNumber(String(description ?? ""));
 }
 
 function classifyTaskCategory(description) {
@@ -2403,6 +2403,10 @@ function stripExplicitMinutesFromText(description) {
     .trim();
 
   return normalized;
+}
+
+function stripLeadingTaskNumber(description) {
+  return String(description ?? "").replace(/^\s*\d+\.\s*/, "");
 }
 
 function mergeTaskEntries(primaryTasks, secondaryTasks) {

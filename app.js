@@ -2062,6 +2062,14 @@ function parseStructuredTaskBlocks(content) {
       continue;
     }
 
+    const compactClientTask = parseCompactClientTaskLine(line);
+    if (compactClientTask && currentDate) {
+      commitClientTasks();
+      currentClient = compactClientTask.clientName;
+      currentBlockLines = [compactClientTask.description];
+      continue;
+    }
+
     if (currentDate && currentClient) {
       if (!currentBlockLines.length) {
         currentBlockLines = [preservedLine];
@@ -2198,6 +2206,30 @@ function isClientHeadingLine(line, options = {}) {
   return null;
 }
 
+function parseCompactClientTaskLine(line) {
+  const text = String(line ?? "").trim();
+  if (!text || isStructuredDateLine(text) || isSeparatorLine(text)) {
+    return null;
+  }
+
+  const match = text.match(/^\d+\)\s*([a-z0-9][a-z0-9.&/ -]{1,60}?)\s*-\s*(.+)$/i);
+  if (!match) {
+    return null;
+  }
+
+  const clientName = match[1].trim().replace(/\s*-\s*$/, "");
+  const description = match[2].trim();
+  if (!clientName || !description) {
+    return null;
+  }
+
+  if (description.includes("://") || description.length > 120) {
+    return null;
+  }
+
+  return { clientName, description };
+}
+
 function resolveTaskMinutes(description) {
   const explicitMinutes = extractExplicitMinutes(description);
   if (!Number.isNaN(explicitMinutes)) {
@@ -2308,7 +2340,7 @@ function normalizeTaskDescription(description) {
 }
 
 function getDisplayTaskDescription(description) {
-  return stripLeadingTaskNumber(String(description ?? ""));
+  return stripLeadingTaskNumber(stripExplicitMinutesFromText(String(description ?? "")));
 }
 
 function classifyTaskCategory(description) {

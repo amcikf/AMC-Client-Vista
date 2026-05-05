@@ -2597,12 +2597,12 @@ function buildMonthlyAutoTasks(amcRows, existingTasks) {
 
   const autoTaskTemplates = [
     {
-      description: "Updated WordPress core and plugins to the latest versions and tested the website to ensure everything is working properly.",
-      minutes: 30,
+      description: "Wordpress Core File upgrade to latest version",
+      minutes: 45,
     },
     {
-      description: "Created and verified a full website backup (files and database) for security and recovery purposes.",
-      minutes: 30,
+      description: "Plugins upgraded to latest version and checked the compatibility issues",
+      minutes: 45,
     },
   ];
 
@@ -3342,6 +3342,14 @@ async function generateClientPdf(report, month = "") {
   doc.text(`Total Minutes: ${formatMinutes(totalMinutes)}`, 14, finalY);
   doc.text(`Total Hours: ${formatHours(totalMinutes / 60)}`, 14, finalY + 6);
 
+  const lastPageNumber = doc.getNumberOfPages();
+  doc.setPage(lastPageNumber);
+  const lastPageHeight = doc.internal.pageSize.getHeight();
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10.4);
+  doc.setTextColor(53, 64, 77);
+  doc.text(`Remaining Hours: ${formatHours(scopedReport.remainingHours)}`, 14, lastPageHeight - 16);
+
   const periodSlug = selectedMonth ? `-${slugify(reportPeriodLabel)}` : "-all-months";
   doc.save(`${slugify(report.clientName)}-amc-report${periodSlug}-${timestampSlug()}.pdf`);
 }
@@ -3445,10 +3453,6 @@ async function drawReferenceStyleClientPdfHeader(doc, report, { logoDataUrl = ""
   doc.setFont("helvetica", "bold");
   doc.setFontSize(11.2);
   doc.text("Activity Log", marginX, activityTitleY);
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(113, 123, 134);
-  doc.setFontSize(8.6);
-  doc.text(`- ${report.tasks.length} entries | ${reportPeriodLabel}`, marginX + 25, activityTitleY);
 
   return activitySubY + 4;
 }

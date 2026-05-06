@@ -3416,11 +3416,14 @@ async function drawReferenceStyleClientPdfHeader(doc, report, { logoDataUrl = ""
   const sectionWidth = pageWidth - marginX * 2;
   const detailGap = 3;
   const columnWidth = (sectionWidth - detailGap * 3) / 4;
-  const detailCardHeight = 21;
   const detailLabelColor = [110, 120, 132];
   const detailValueColor = [31, 43, 57];
   const detailLabelY = detailsTop + 6;
-  const detailValueY = detailsTop + 14.5;
+  const detailValueY = detailsTop + 13.5;
+  const preparedByLines = doc.splitTextToSize("I Knowledge Factory Pvt. Ltd.", columnWidth - 6);
+  const preparedByLineHeight = 4.2;
+  const preparedByBlockHeight = preparedByLines.length * preparedByLineHeight + preparedByLineHeight + 3.2;
+  const detailCardHeight = Math.max(21, 10 + preparedByBlockHeight);
 
   detailItems.forEach((item, index) => {
     const x = marginX + index * (columnWidth + detailGap);
@@ -3440,12 +3443,11 @@ async function drawReferenceStyleClientPdfHeader(doc, report, { logoDataUrl = ""
     doc.setTextColor(...detailValueColor);
     doc.setFont("helvetica", "bold");
     if (index === 3) {
-      const preparedByLines = doc.splitTextToSize(item[1][0], columnWidth - 6);
-      doc.setFontSize(8.7);
-      preparedByLines.slice(0, 2).forEach((line, lineIndex) => {
-        doc.text(line, x + 3, detailValueY + lineIndex * 4.2);
+      doc.setFontSize(8.5);
+      preparedByLines.forEach((line, lineIndex) => {
+        doc.text(line, x + 3, detailValueY + lineIndex * preparedByLineHeight);
       });
-      doc.text(item[1][1], x + 3, detailValueY + preparedByLines.slice(0, 2).length * 4.2 + 0.6);
+      doc.text(item[1][1], x + 3, detailValueY + preparedByLines.length * preparedByLineHeight + 1.2);
     } else {
       doc.setFontSize(10.8);
       doc.text(item[1][0], x + 3, detailValueY);

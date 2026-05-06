@@ -3347,15 +3347,7 @@ async function drawReferenceStyleClientPdfHeader(doc, report, { logoDataUrl = ""
   const pageWidth = doc.internal.pageSize.getWidth();
   const marginX = 14;
   const bandHeight = 34;
-  const detailsTop = bandHeight + 10;
-  const statsTop = 88;
-  const detailLabelY = detailsTop + 7;
-  const detailValueY = detailLabelY + 4.6;
-  const statLabelY = statsTop + 6;
-  const statValueY = statLabelY + 9;
-  const statDescY = statValueY + 11;
-  const detailXs = [marginX, 64, 110, 156];
-  const statXs = [14, 55, 96, 137];
+  const detailsTop = bandHeight + 18;
   const lineColor = [219, 225, 232];
   const textDark = [34, 46, 58];
   const textMuted = [98, 111, 126];
@@ -3382,11 +3374,15 @@ async function drawReferenceStyleClientPdfHeader(doc, report, { logoDataUrl = ""
   doc.setTextColor(255, 255, 255);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(18);
-  doc.text("AMC Client Report", 52, 18);
+  doc.text("AMC Client Report", pageWidth / 2, 17, { align: "center" });
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(10.5);
+  doc.setFontSize(10.3);
   doc.setTextColor(240, 244, 248);
-  doc.text(report.clientName, 52, 25);
+  doc.text(reportPeriodLabel || "Monthly Activity Summary", pageWidth / 2, 24, { align: "center" });
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(13.5);
+  doc.setTextColor(...textDark);
+  doc.text(report.clientName, pageWidth / 2, bandHeight + 11, { align: "center" });
 
   const detailItems = [
     ["CLIENT", [report.clientName]],
@@ -3394,48 +3390,42 @@ async function drawReferenceStyleClientPdfHeader(doc, report, { logoDataUrl = ""
     ["AMC END", [formatAmcEndDateDisplay(report.endDateDisplay, report.endDateComparable)]],
     ["PREPARED BY", ["I Knowledge Factory Pvt. Ltd.", "AMC Team"]],
   ];
-  const detailGapX = 4.8;
-  const detailGapY = 5.2;
-  const detailCardWidth = (pageWidth - marginX * 2 - detailGapX) / 2;
-  const detailCardHeight = 16.5;
-  const detailCardShadow = [238, 242, 246];
-  const detailCardBorder = [221, 227, 234];
-  const detailCardFill = [255, 255, 255];
-  const detailLabelColor = [96, 108, 120];
+  const sectionWidth = pageWidth - marginX * 2;
+  const columnWidth = sectionWidth / 4;
+  const detailLabelColor = [110, 120, 132];
   const detailValueColor = [31, 43, 57];
+  const detailLabelY = detailsTop + 4;
+  const detailValueY = detailsTop + 12;
+
+  doc.setDrawColor(...lineColor);
+  doc.setLineWidth(0.2);
+  doc.line(marginX, detailsTop - 3, pageWidth - marginX, detailsTop - 3);
+  doc.line(marginX, detailsTop + 16, pageWidth - marginX, detailsTop + 16);
 
   detailItems.forEach((item, index) => {
-    const row = Math.floor(index / 2);
-    const col = index % 2;
-    const x = marginX + col * (detailCardWidth + detailGapX);
-    const y = detailsTop + row * (detailCardHeight + detailGapY);
-
-    doc.setFillColor(...detailCardShadow);
-    doc.roundedRect(x + 0.7, y + 0.9, detailCardWidth, detailCardHeight, 2.4, 2.4, "F");
-    doc.setFillColor(...detailCardFill);
-    doc.setDrawColor(...detailCardBorder);
-    doc.setLineWidth(0.18);
-    doc.roundedRect(x, y, detailCardWidth, detailCardHeight, 2.4, 2.4, "FD");
+    const x = marginX + index * columnWidth;
+    if (index > 0) {
+      doc.line(x - 2.5, detailsTop - 1, x - 2.5, detailsTop + 14);
+    }
 
     doc.setTextColor(...detailLabelColor);
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(8.4);
-    doc.text(item[0], x + 3.2, y + 5.0);
+    doc.setFontSize(8.2);
+    doc.text(item[0], x, detailLabelY);
 
     doc.setTextColor(...detailValueColor);
     doc.setFont("helvetica", "bold");
     if (index === 3) {
-      doc.setFontSize(10.1);
-      doc.text(item[1][0], x + 3.2, y + 10.0);
-      doc.text(item[1][1], x + 3.2, y + 14.6);
+      doc.setFontSize(9.4);
+      doc.text(item[1][0], x, detailValueY);
+      doc.text(item[1][1], x, detailValueY + 4.7);
     } else {
-      doc.setFontSize(11.5);
-      doc.text(item[1][0], x + 3.2, y + 11.0);
+      doc.setFontSize(10.8);
+      doc.text(item[1][0], x, detailValueY);
     }
   });
 
-  const activityTitleY = statsTop;
-
+  const activityTitleY = detailsTop + 28;
   const activitySubY = activityTitleY + 5.2;
 
   doc.setTextColor(40, 52, 66);

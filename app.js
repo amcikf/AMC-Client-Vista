@@ -3025,12 +3025,8 @@ function getClientModalTasks(report, month = "") {
 function buildClientModalReportView(report, month = "") {
   const selectedMonth = isValidReportMonth(month) ? month : "";
   const allTasks = report.tasks || [];
-  const reportableTasks = allTasks;
   const scopedTasks = selectedMonth ? allTasks.filter((task) => isDateInReportMonth(task.date, selectedMonth)) : allTasks;
-  const scopedReportableTasks = selectedMonth
-    ? reportableTasks.filter((task) => isDateInReportMonth(task.date, selectedMonth))
-    : reportableTasks;
-  const categorySummary = buildTaskCategorySummary(scopedReportableTasks);
+  const categorySummary = buildTaskCategorySummary(scopedTasks, { includeAutoTasks: true });
   const consumedMinutes = scopedTasks.reduce((sum, task) => sum + task.minutes, 0);
   const consumedHours = consumedMinutes / 60;
   const remainingHours = report.allocatedHours - consumedHours;
@@ -3038,12 +3034,12 @@ function buildClientModalReportView(report, month = "") {
   const remainingPct = report.allocatedHours === 0 ? 0 : (remainingHours / report.allocatedHours) * 100;
   const usageBand = remainingHours < 0 ? "red" : remainingPct <= 20 ? "orange" : "green";
   const topTaskCategory = categorySummary[0]?.category || "Other";
-  const classifiedTaskCount = scopedReportableTasks.filter((task) => task.category && task.category !== "Other").length;
+  const classifiedTaskCount = scopedTasks.filter((task) => task.category && task.category !== "Other").length;
 
   return {
     ...report,
     tasks: scopedTasks,
-    reportableTasks: scopedReportableTasks,
+    reportableTasks: scopedTasks,
     taskCategorySummary: categorySummary,
     topTaskCategory,
     classifiedTaskCount,

@@ -3285,7 +3285,7 @@ async function generateClientPdf(report, month = "") {
   const logoDataUrl = await getIkfLogoDataUrl();
   const clientHeaderBottom = await drawReferenceStyleClientPdfHeader(doc, scopedReport, {
     logoDataUrl,
-    reportPeriodLabel,
+    reportPeriodLabel: selectedMonth ? `Monthly Activity Summary | ${reportPeriodLabel}` : reportPeriodLabel,
   });
 
   doc.autoTable({
@@ -3300,9 +3300,9 @@ async function generateClientPdf(report, month = "") {
         ])
     : [["-", "No task entries found for this client.", "-", "-"]],
     theme: "grid",
-    styles: { fontSize: 8.2, cellPadding: 3.2, lineColor: [224, 229, 235], lineWidth: 0.1, valign: "top", textColor: [45, 56, 69] },
-    headStyles: { fillColor: [31, 47, 66], textColor: [255, 255, 255], fontStyle: "bold" },
-    alternateRowStyles: { fillColor: [250, 251, 253] },
+    styles: { fontSize: 8.15, cellPadding: 3.05, lineColor: [224, 229, 235], lineWidth: 0.1, valign: "top", textColor: [45, 56, 69], fillColor: [255, 255, 255] },
+    headStyles: { fillColor: [31, 47, 66], textColor: [255, 255, 255], fontStyle: "bold", halign: "left" },
+    alternateRowStyles: { fillColor: [255, 255, 255] },
     margin: { left: 14, right: 14 },
     columnStyles: {
       0: { cellWidth: 30, halign: "left", overflow: "hidden" },
@@ -3376,11 +3376,11 @@ async function drawReferenceStyleClientPdfHeader(doc, report, { logoDataUrl = ""
   doc.setFontSize(18);
   doc.text("AMC Client Report", pageWidth / 2, 17, { align: "center" });
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(10.3);
+  doc.setFontSize(10.1);
   doc.setTextColor(240, 244, 248);
   doc.text(reportPeriodLabel || "Monthly Activity Summary", pageWidth / 2, 24, { align: "center" });
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(13.5);
+  doc.setFontSize(13.2);
   doc.setTextColor(...textDark);
   doc.text(report.clientName, pageWidth / 2, bandHeight + 11, { align: "center" });
 
@@ -4045,7 +4045,7 @@ async function registerServiceWorker() {
   }
 
   try {
-    await navigator.serviceWorker.register("./sw.js?v=20260506");
+    await navigator.serviceWorker.register("./sw.js?v=20260507");
   } catch (error) {
     console.warn("Service worker registration skipped.", error);
   }

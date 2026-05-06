@@ -3272,6 +3272,7 @@ async function generateClientPdf(report, month = "") {
   }
 
   const doc = createPdfDocument("portrait");
+  doc.__customClientFooter = true;
   const selectedMonth = isValidReportMonth(month) ? month : "";
   const scopedReport = buildClientModalReportView(report, selectedMonth);
   const overallReport = getOverallClientReport(report);
@@ -3302,7 +3303,7 @@ async function generateClientPdf(report, month = "") {
     theme: "grid",
     styles: { fontSize: 8.15, cellPadding: 3.05, lineColor: [224, 229, 235], lineWidth: 0.1, valign: "top", textColor: [45, 56, 69], fillColor: [255, 255, 255] },
     headStyles: { fillColor: [31, 47, 66], textColor: [255, 255, 255], fontStyle: "bold", halign: "left" },
-    alternateRowStyles: { fillColor: [255, 255, 255] },
+    alternateRowStyles: { fillColor: [243, 247, 252] },
     margin: { left: 14, right: 14 },
     columnStyles: {
       0: { cellWidth: 30, halign: "left", overflow: "hidden" },
@@ -3310,22 +3311,44 @@ async function generateClientPdf(report, month = "") {
       2: { cellWidth: 28, halign: "center" },
       3: { cellWidth: 18, halign: "center" },
     },
+    didParseCell: (data) => {
+      if (data.section === "body" && data.column.index === 2 && data.cell.raw && data.cell.raw !== "-") {
+        data.cell.text = [""];
+      }
+    },
+    didDrawCell: (data) => {
+      if (data.section !== "body" || data.column.index !== 2 || !data.cell.raw || data.cell.raw === "-") {
+        return;
+      }
+
+      const label = String(data.cell.raw);
+      const isUpdate = label.toLowerCase() === "update";
+      const fill = isUpdate ? [247, 213, 168] : [217, 232, 251];
+      const text = isUpdate ? [165, 101, 22] : [60, 113, 183];
+      const pillWidth = Math.min(data.cell.width - 7, Math.max(14, label.length * 2.4 + 7));
+      const pillHeight = 7.2;
+      const pillX = data.cell.x + (data.cell.width - pillWidth) / 2;
+      const pillY = data.cell.y + (data.cell.height - pillHeight) / 2;
+
+      data.doc.setFillColor(...fill);
+      data.doc.roundedRect(pillX, pillY, pillWidth, pillHeight, 3.2, 3.2, "F");
+      data.doc.setTextColor(...text);
+      data.doc.setFont("helvetica", "bold");
+      data.doc.setFontSize(7.3);
+      data.doc.text(label, data.cell.x + data.cell.width / 2, pillY + 4.85, { align: "center" });
+    },
     didDrawPage: addPdfFooter,
   });
-
-  const finalY = doc.lastAutoTable.finalY + 8;
-  doc.setFontSize(10);
-  doc.setTextColor(70, 82, 96);
-  doc.text(`Total Minutes: ${formatMinutes(totalMinutes)}`, 14, finalY);
-  doc.text(`Total Hours: ${formatHours(totalMinutes / 60)}`, 14, finalY + 6);
 
   const lastPageNumber = doc.getNumberOfPages();
   doc.setPage(lastPageNumber);
   const lastPageHeight = doc.internal.pageSize.getHeight();
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(10.4);
-  doc.setTextColor(53, 64, 77);
-  doc.text(`Remaining Hours: ${formatHours(overallReport.remainingHours)}`, 14, lastPageHeight - 16);
+  drawClientPdfTotalsRow(doc, {
+    totalMinutes,
+    totalHours: totalMinutes / 60,
+    remainingHours: overallReport.remainingHours,
+    reportPeriodLabel,
+  });
 
   const periodSlug = selectedMonth ? `-${slugify(reportPeriodLabel)}` : "-all-months";
   doc.save(`${slugify(report.clientName)}-amc-report${periodSlug}-${timestampSlug()}.pdf`);
@@ -3391,41 +3414,45 @@ async function drawReferenceStyleClientPdfHeader(doc, report, { logoDataUrl = ""
     ["PREPARED BY", ["I Knowledge Factory Pvt. Ltd.", "AMC Team"]],
   ];
   const sectionWidth = pageWidth - marginX * 2;
-  const columnWidth = sectionWidth / 4;
+  const detailGap = 3;
+  const columnWidth = (sectionWidth - detailGap * 3) / 4;
+  const detailCardHeight = 21;
   const detailLabelColor = [110, 120, 132];
   const detailValueColor = [31, 43, 57];
-  const detailLabelY = detailsTop + 4;
-  const detailValueY = detailsTop + 12;
-
-  doc.setDrawColor(...lineColor);
-  doc.setLineWidth(0.2);
-  doc.line(marginX, detailsTop - 3, pageWidth - marginX, detailsTop - 3);
-  doc.line(marginX, detailsTop + 16, pageWidth - marginX, detailsTop + 16);
+  const detailLabelY = detailsTop + 6;
+  const detailValueY = detailsTop + 14.5;
 
   detailItems.forEach((item, index) => {
-    const x = marginX + index * columnWidth;
-    if (index > 0) {
-      doc.line(x - 2.5, detailsTop - 1, x - 2.5, detailsTop + 14);
-    }
+    const x = marginX + index * (columnWidth + detailGap);
+
+    doc.setFillColor(255, 255, 255);
+    doc.setDrawColor(...lineColor);
+    doc.setLineWidth(0.3);
+    doc.roundedRect(x, detailsTop, columnWidth, detailCardHeight, 2.2, 2.2, "FD");
+    doc.setFillColor(...bandAccent);
+    doc.rect(x, detailsTop, columnWidth, 1.2, "F");
 
     doc.setTextColor(...detailLabelColor);
     doc.setFont("helvetica", "bold");
     doc.setFontSize(8.2);
-    doc.text(item[0], x, detailLabelY);
+    doc.text(item[0], x + 3, detailLabelY);
 
     doc.setTextColor(...detailValueColor);
     doc.setFont("helvetica", "bold");
     if (index === 3) {
-      doc.setFontSize(9.4);
-      doc.text(item[1][0], x, detailValueY);
-      doc.text(item[1][1], x, detailValueY + 4.7);
+      const preparedByLines = doc.splitTextToSize(item[1][0], columnWidth - 6);
+      doc.setFontSize(8.7);
+      preparedByLines.slice(0, 2).forEach((line, lineIndex) => {
+        doc.text(line, x + 3, detailValueY + lineIndex * 4.2);
+      });
+      doc.text(item[1][1], x + 3, detailValueY + preparedByLines.slice(0, 2).length * 4.2 + 0.6);
     } else {
       doc.setFontSize(10.8);
-      doc.text(item[1][0], x, detailValueY);
+      doc.text(item[1][0], x + 3, detailValueY);
     }
   });
 
-  const activityTitleY = detailsTop + 28;
+  const activityTitleY = detailsTop + detailCardHeight + 8;
   const activitySubY = activityTitleY + 5.2;
 
   doc.setTextColor(40, 52, 66);
@@ -3434,6 +3461,45 @@ async function drawReferenceStyleClientPdfHeader(doc, report, { logoDataUrl = ""
   doc.text("Activity Log", marginX, activityTitleY);
 
   return activitySubY + 4;
+}
+
+function drawClientPdfTotalsRow(doc, { totalMinutes = 0, totalHours = 0, remainingHours = 0, reportPeriodLabel = "" } = {}) {
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const marginX = 14;
+  const gap = 4;
+  const cardY = pageHeight - 34;
+  const cardHeight = 18;
+  const cardWidth = (pageWidth - marginX * 2 - gap * 2) / 3;
+  const cards = [
+    { label: "TOTAL MINUTES", value: formatMinutes(totalMinutes), fill: [31, 47, 66], text: [255, 255, 255], accent: [214, 166, 76] },
+    { label: "TOTAL HOURS", value: formatHours(totalHours), fill: [255, 255, 255], text: [31, 47, 66], accent: [213, 219, 225] },
+    { label: "REMAINING HOURS", value: formatHours(remainingHours), fill: [214, 166, 76], text: [31, 47, 66], accent: [31, 47, 66] },
+  ];
+
+  cards.forEach((card, index) => {
+    const x = marginX + index * (cardWidth + gap);
+    doc.setFillColor(...card.fill);
+    doc.setDrawColor(205, 213, 223);
+    doc.setLineWidth(0.28);
+    doc.roundedRect(x, cardY, cardWidth, cardHeight, 2.2, 2.2, "FD");
+    doc.setFillColor(...card.accent);
+    doc.rect(x, cardY, index === 2 ? 1.4 : cardWidth, index === 2 ? cardHeight : 1.2, "F");
+
+    doc.setTextColor(...card.text);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(7.1);
+    doc.text(card.label, x + cardWidth / 2, cardY + 5.7, { align: "center" });
+    doc.setFontSize(16);
+    doc.text(card.value, x + cardWidth / 2, cardY + 14.2, { align: "center" });
+  });
+
+  doc.setTextColor(98, 111, 126);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(6.4);
+  doc.text("I Knowledge Factory Pvt. Ltd.  |  craft | care | amplify", marginX, pageHeight - 4.8);
+  doc.setFont("helvetica", "bold");
+  doc.text(`AMC REPORT  |  ${reportPeriodLabel || ""}`, pageWidth - marginX, pageHeight - 4.8, { align: "right" });
 }
 
 function getCalendarDaysRemaining(endDateDisplay, endDateComparable) {
@@ -3789,6 +3855,10 @@ async function rasterizeImageDataUrl(imageSrc) {
 }
 
 function addPdfFooter(data) {
+  if (data?.doc?.__customClientFooter) {
+    return;
+  }
+
   const pageSize = data.doc.internal.pageSize;
   const pageHeight = pageSize.height || pageSize.getHeight();
   const pageWidth = pageSize.width || pageSize.getWidth();
@@ -4045,7 +4115,7 @@ async function registerServiceWorker() {
   }
 
   try {
-    await navigator.serviceWorker.register("./sw.js?v=20260507");
+    await navigator.serviceWorker.register("./sw.js?v=20260508");
   } catch (error) {
     console.warn("Service worker registration skipped.", error);
   }

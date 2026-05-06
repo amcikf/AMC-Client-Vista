@@ -3029,10 +3029,12 @@ function buildClientModalReportView(report, month = "") {
   const categorySummary = buildTaskCategorySummary(scopedTasks, { includeAutoTasks: true });
   const consumedMinutes = scopedTasks.reduce((sum, task) => sum + task.minutes, 0);
   const consumedHours = consumedMinutes / 60;
-  const remainingHours = report.allocatedHours - consumedHours;
+  const scopedRemainingHours = report.allocatedHours - consumedHours;
+  const overallReport = getOverallClientReport(report);
+  const remainingHours = overallReport.remainingHours;
   const usagePct = report.allocatedHours === 0 ? 0 : (consumedHours / report.allocatedHours) * 100;
-  const remainingPct = report.allocatedHours === 0 ? 0 : (remainingHours / report.allocatedHours) * 100;
-  const usageBand = remainingHours < 0 ? "red" : remainingPct <= 20 ? "orange" : "green";
+  const remainingPct = report.allocatedHours === 0 ? 0 : (scopedRemainingHours / report.allocatedHours) * 100;
+  const usageBand = scopedRemainingHours < 0 ? "red" : remainingPct <= 20 ? "orange" : "green";
   const topTaskCategory = categorySummary[0]?.category || "Other";
   const classifiedTaskCount = scopedTasks.filter((task) => task.category && task.category !== "Other").length;
 
@@ -3294,10 +3296,7 @@ async function generateClientPdf(report, month = "") {
   const doc = createPdfDocument("portrait");
   const selectedMonth = isValidReportMonth(month) ? month : "";
   const scopedReport = buildClientModalReportView(report, selectedMonth);
-  const overallReport =
-    state.amcRows.length && state.taskEntries.length
-      ? buildClientReports(state.amcRows, state.taskEntries, "").find((item) => item.clientKey === report.clientKey) || report
-      : report;
+  const overallReport = getOverallClientReport(report);
   const reportPeriodLabel = selectedMonth
     ? formatReportMonthLabel(selectedMonth)
     : state.reportMonth
@@ -3352,6 +3351,18 @@ async function generateClientPdf(report, month = "") {
 
   const periodSlug = selectedMonth ? `-${slugify(reportPeriodLabel)}` : "-all-months";
   doc.save(`${slugify(report.clientName)}-amc-report${periodSlug}-${timestampSlug()}.pdf`);
+}
+
+function getOverallClientReport(report) {
+  if (!report) {
+    return report;
+  }
+
+  if (!state.amcRows.length || !state.taskEntries.length) {
+    return report;
+  }
+
+  return buildClientReports(state.amcRows, state.taskEntries, "").find((item) => item.clientKey === report.clientKey) || report;
 }
 
 async function drawReferenceStyleClientPdfHeader(doc, report, { logoDataUrl = "", reportPeriodLabel = "" } = {}) {

@@ -3294,6 +3294,10 @@ async function generateClientPdf(report, month = "") {
   const doc = createPdfDocument("portrait");
   const selectedMonth = isValidReportMonth(month) ? month : "";
   const scopedReport = buildClientModalReportView(report, selectedMonth);
+  const overallReport =
+    state.amcRows.length && state.taskEntries.length
+      ? buildClientReports(state.amcRows, state.taskEntries, "").find((item) => item.clientKey === report.clientKey) || report
+      : report;
   const reportPeriodLabel = selectedMonth
     ? formatReportMonthLabel(selectedMonth)
     : state.reportMonth
@@ -3344,7 +3348,7 @@ async function generateClientPdf(report, month = "") {
   doc.setFont("helvetica", "bold");
   doc.setFontSize(10.4);
   doc.setTextColor(53, 64, 77);
-  doc.text(`Remaining Hours: ${formatHours(scopedReport.remainingHours)}`, 14, lastPageHeight - 16);
+  doc.text(`Remaining Hours: ${formatHours(overallReport.remainingHours)}`, 14, lastPageHeight - 16);
 
   const periodSlug = selectedMonth ? `-${slugify(reportPeriodLabel)}` : "-all-months";
   doc.save(`${slugify(report.clientName)}-amc-report${periodSlug}-${timestampSlug()}.pdf`);

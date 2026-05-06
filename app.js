@@ -3014,7 +3014,7 @@ function getClientModalMonth(report) {
 }
 
 function getClientModalTasks(report, month = "") {
-  const reportableTasks = (report.tasks || []).filter((task) => task.source !== "auto");
+  const reportableTasks = report.tasks || [];
   if (!isValidReportMonth(month)) {
     return reportableTasks;
   }
@@ -3025,7 +3025,7 @@ function getClientModalTasks(report, month = "") {
 function buildClientModalReportView(report, month = "") {
   const selectedMonth = isValidReportMonth(month) ? month : "";
   const allTasks = report.tasks || [];
-  const reportableTasks = allTasks.filter((task) => task.source !== "auto");
+  const reportableTasks = allTasks;
   const scopedTasks = selectedMonth ? allTasks.filter((task) => isDateInReportMonth(task.date, selectedMonth)) : allTasks;
   const scopedReportableTasks = selectedMonth
     ? reportableTasks.filter((task) => isDateInReportMonth(task.date, selectedMonth))
@@ -4066,7 +4066,7 @@ async function registerServiceWorker() {
   }
 
   try {
-    await navigator.serviceWorker.register("./sw.js?v=20260461");
+    await navigator.serviceWorker.register("./sw.js?v=20260506");
   } catch (error) {
     console.warn("Service worker registration skipped.", error);
   }

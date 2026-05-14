@@ -40,6 +40,8 @@ let alertConfigSyncTimer = null;
 
 const DRIVE_STORAGE_KEY = "amc.driveConfig.v1";
 const REPORT_MONTH_STORAGE_KEY = "amc.reportMonth.v1";
+const REPORT_SCOPE_LAST_3 = "__last_3_months__";
+const REPORT_SCOPE_LAST_6 = "__last_6_months__";
 const ALERT_RECIPIENT_STORAGE_KEY = "amc.alertRecipientEmail.v1";
 const PUBLISHED_SOURCE_REFRESH_INTERVAL_MS = 5 * 60 * 1000;
 const LOCAL_SOURCE_WATCH_INTERVAL_MS = 2000;
@@ -669,7 +671,7 @@ function loadDriveConfigFromStorage() {
 
 function loadReportMonthFromStorage() {
   state.reportMonth = String(window.localStorage.getItem(REPORT_MONTH_STORAGE_KEY) || "").trim();
-  if (!isValidReportMonth(state.reportMonth)) {
+  if (!isValidReportMonthSelection(state.reportMonth)) {
     state.reportMonth = "";
   }
 }
@@ -701,7 +703,7 @@ async function loadAlertConfigFromServer() {
 }
 
 function persistReportMonth(reportMonth) {
-  state.reportMonth = isValidReportMonth(reportMonth) ? reportMonth : "";
+  state.reportMonth = isValidReportMonthSelection(reportMonth) ? reportMonth : "";
   if (state.reportMonth) {
     window.localStorage.setItem(REPORT_MONTH_STORAGE_KEY, state.reportMonth);
   } else {
@@ -741,7 +743,7 @@ function handleReportMonthChange() {
 
 function readReportMonthFromInput() {
   const value = String(elements.reportMonthInput?.value || "").trim();
-  return isValidReportMonth(value) ? value : "";
+  return isValidReportMonthSelection(value) ? value : "";
 }
 
 function syncReportMonthInput() {
@@ -757,11 +759,14 @@ function populateReportMonthOptions(amcRows = []) {
   const monthOptions = buildReportMonthOptions(amcRows);
   const optionsMarkup = [
     `<option value="">All Months</option>`,
+    `<option value="${REPORT_SCOPE_LAST_3}">Last 3 Months (Including Current)</option>`,
+    `<option value="${REPORT_SCOPE_LAST_6}">Last 6 Months (Including Current)</option>`,
     ...monthOptions.map((monthKey) => `<option value="${monthKey}">${escapeHtml(formatReportMonthLabel(monthKey))}</option>`),
   ].join("");
 
   elements.reportMonthInput.innerHTML = optionsMarkup;
-  elements.reportMonthInput.value = monthOptions.includes(currentValue) ? currentValue : "";
+  const validSelections = new Set(["", REPORT_SCOPE_LAST_3, REPORT_SCOPE_LAST_6, ...monthOptions]);
+  elements.reportMonthInput.value = validSelections.has(currentValue) ? currentValue : "";
 }
 
 function buildReportMonthOptions(amcRows = []) {
@@ -791,11 +796,24 @@ function updateReportScopeNote() {
     : "Showing all months.";
 }
 
+function isValidReportMonthSelection(value) {
+  const normalized = String(value || "").trim();
+  return !normalized || isValidReportMonth(normalized) || normalized === REPORT_SCOPE_LAST_3 || normalized === REPORT_SCOPE_LAST_6;
+}
+
 function isValidReportMonth(value) {
   return /^\d{4}-\d{2}$/.test(String(value || "").trim());
 }
 
 function formatReportMonthLabel(value) {
+  if (value === REPORT_SCOPE_LAST_3) {
+    return "Last 3 Months (Including Current)";
+  }
+
+  if (value === REPORT_SCOPE_LAST_6) {
+    return "Last 6 Months (Including Current)";
+  }
+
   if (!isValidReportMonth(value)) {
     return "All Months";
   }
@@ -812,7 +830,7 @@ function formatReportMonthLabel(value) {
 }
 
 function isDateInReportMonth(value, reportMonth) {
-  if (!isValidReportMonth(reportMonth)) {
+  if (!reportMonth) {
     return true;
   }
 
@@ -823,7 +841,30 @@ function isDateInReportMonth(value, reportMonth) {
 
   const date = new Date(parsed);
   const monthKey = `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
+
+  if (reportMonth === REPORT_SCOPE_LAST_3 || reportMonth === REPORT_SCOPE_LAST_6) {
+    const monthCount = reportMonth === REPORT_SCOPE_LAST_3 ? 3 : 6;
+    const recentMonthKeys = new Set(getRecentMonthKeys(monthCount));
+    return recentMonthKeys.has(monthKey);
+  }
+
+  if (!isValidReportMonth(reportMonth)) {
+    return true;
+  }
+
   return monthKey === reportMonth;
+}
+
+function getRecentMonthKeys(count) {
+  const safeCount = Math.max(1, Number(count) || 1);
+  const keys = [];
+  const now = new Date();
+  const cursor = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+  for (let index = 0; index < safeCount; index += 1) {
+    keys.push(`${cursor.getUTCFullYear()}-${String(cursor.getUTCMonth() + 1).padStart(2, "0")}`);
+    cursor.setUTCMonth(cursor.getUTCMonth() - 1);
+  }
+  return keys;
 }
 
 function isDateWithinAmcPeriod(value, startComparable, endComparable) {

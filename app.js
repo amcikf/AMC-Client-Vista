@@ -2056,6 +2056,9 @@ function parseStructuredTaskBlocks(content) {
       if (!description) {
         continue;
       }
+      if (!getDisplayTaskDescription(description).trim()) {
+        continue;
+      }
 
       const minutes = resolveTaskMinutes(description);
       tasks.push(
@@ -2144,10 +2147,28 @@ function splitStructuredClientTasks(lines = []) {
     return [combinedText.trim()];
   }
 
-  return combinedText
+  const rawParts = combinedText
     .split(/\n(?=\s*(?:\d+\.\s+|case\s*study\s*\d+\s*:))/i)
     .map((item) => item.trim())
     .filter(Boolean);
+
+  const finalizedParts = [];
+  for (let index = 0; index < rawParts.length; index += 1) {
+    const item = rawParts[index];
+    const markerOnly = /^(?:\d+\.\s*|case\s*study\s*\d+\s*:)\s*$/i.test(item);
+    if (!markerOnly) {
+      finalizedParts.push(item);
+      continue;
+    }
+
+    const next = rawParts[index + 1];
+    if (next) {
+      finalizedParts.push(`${item} ${next}`.trim());
+      index += 1;
+    }
+  }
+
+  return finalizedParts.filter(Boolean);
 }
 
 function getLeadingWhitespaceWidth(value) {

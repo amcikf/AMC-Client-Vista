@@ -3383,7 +3383,7 @@ async function generateSummaryPdf() {
       report.amcStatus,
     ]),
     theme: "grid",
-    styles: { fontSize: 10, cellPadding: 4.2, lineColor: [216, 221, 228], lineWidth: 0.1, textColor: [40, 50, 62] },
+    styles: { fontSize: 11, cellPadding: 4.2, lineColor: [216, 221, 228], lineWidth: 0.1, textColor: [40, 50, 62] },
     headStyles: { fillColor: [71, 85, 105], textColor: [255, 255, 255], fontStyle: "bold" },
     alternateRowStyles: { fillColor: [249, 250, 252] },
     didDrawPage: addPdfFooter,
@@ -3429,7 +3429,7 @@ async function generateClientPdf(report, month = "") {
         ])
     : [["-", "No task entries found for this client.", "-", "-"]],
     theme: "grid",
-    styles: { fontSize: 8.15, cellPadding: 3.05, lineColor: [224, 229, 235], lineWidth: 0.1, valign: "top", textColor: [45, 56, 69], fillColor: [255, 255, 255] },
+    styles: { fontSize: 9.4, cellPadding: 3.05, lineColor: [224, 229, 235], lineWidth: 0.1, valign: "top", textColor: [45, 56, 69], fillColor: [255, 255, 255] },
     headStyles: { fillColor: [31, 47, 66], textColor: [255, 255, 255], fontStyle: "bold", halign: "left" },
     alternateRowStyles: { fillColor: [243, 247, 252] },
     margin: { left: 14, right: 14 },

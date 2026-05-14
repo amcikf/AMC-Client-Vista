@@ -3401,7 +3401,7 @@ async function generateClientPdf(report, month = "") {
 
   const doc = createPdfDocument("portrait");
   doc.__customClientFooter = true;
-  const selectedMonth = isValidReportMonth(month) ? month : "";
+  const selectedMonth = isValidReportMonthSelection(month) ? month : "";
   const scopedReport = buildClientModalReportView(report, selectedMonth);
   const overallReport = getOverallClientReport(report);
   const reportPeriodLabel = selectedMonth

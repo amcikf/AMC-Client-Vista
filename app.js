@@ -3217,7 +3217,7 @@ function renderClientModal(report) {
         <strong>${escapeHtml(formatPercentage(modalReport.usagePct))}</strong>
       </article>
       <article class="detail-stat" title="The total task time counted in minutes.">
-        <span>Total Minutes</span>
+        <span>Total used minutes</span>
         <strong>${escapeHtml(formatMinutes(modalReport.consumedMinutes))}</strong>
       </article>
       <article class="detail-stat" title="The task category with the highest time for this client.">
@@ -3268,11 +3268,11 @@ function renderClientModal(report) {
 
     <section class="totals-bar">
       <article class="detail-stat">
-        <span>Total Minutes</span>
+        <span>Total used minutes</span>
         <strong>${escapeHtml(formatMinutes(modalReport.consumedMinutes))}</strong>
       </article>
       <article class="detail-stat">
-        <span>Total Hours</span>
+        <span>Total used Hours</span>
         <strong>${escapeHtml(formatHours(modalReport.consumedHours))}</strong>
       </article>
       <article class="detail-stat">
@@ -3301,13 +3301,23 @@ function renderClientModal(report) {
 }
 
 async function generateSummaryPdf() {
-  if (!state.reports.length) {
+  if (!state.reports.length && !(state.amcRows.length && state.taskEntries.length)) {
     showMessage("Generate the report before exporting the summary PDF.", true);
     return;
   }
 
   if (!isPdfReady()) {
     showMessage("PDF library is not available yet. Please wait a moment and try again.", true);
+    return;
+  }
+
+  const scopedReports = state.amcRows.length && state.taskEntries.length
+    ? buildClientReports(state.amcRows, state.taskEntries, state.reportMonth)
+    : state.reports;
+
+  if (!scopedReports.length) {
+    const scopeText = state.reportMonth ? formatReportMonthLabel(state.reportMonth) : "the selected scope";
+    showMessage(`No report data found for ${scopeText}. Please change the filter and try again.`, true);
     return;
   }
 
@@ -3321,7 +3331,7 @@ async function generateSummaryPdf() {
     metaLines: [`Report Period: ${reportPeriodLabel}`],
   });
 
-  const totals = state.reports.reduce(
+  const totals = scopedReports.reduce(
     (acc, report) => {
       acc.allocated += report.allocatedHours;
       acc.consumed += report.consumedHours;
@@ -3330,7 +3340,7 @@ async function generateSummaryPdf() {
     },
     { allocated: 0, consumed: 0, remaining: 0 },
   );
-  const overallTasks = state.reports.flatMap((report) => report.tasks || []);
+  const overallTasks = scopedReports.flatMap((report) => report.tasks || []);
   const overallCategorySummary = buildTaskCategorySummary(overallTasks.filter((task) => task.source !== "auto")).slice(0, 3);
 
   doc.setFontSize(10.5);
@@ -3362,7 +3372,7 @@ async function generateSummaryPdf() {
       "Usage %",
       "AMC Status",
     ]],
-    body: state.reports.map((report) => [
+    body: scopedReports.map((report) => [
       report.clientName,
       report.startDateDisplay,
       formatAmcEndDateDisplay(report.endDateDisplay, report.endDateComparable),

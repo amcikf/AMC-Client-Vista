@@ -3060,7 +3060,7 @@ function openClientModal(clientKey) {
   }
 
   state.selectedClient = report;
-  state.clientModalMonth = isValidReportMonth(state.reportMonth) ? state.reportMonth : "";
+  state.clientModalMonth = isValidReportMonthSelection(state.reportMonth) ? state.reportMonth : "";
   renderClientModal(report);
   elements.detailModal.classList.remove("hidden");
   elements.detailModal.setAttribute("aria-hidden", "false");
@@ -3079,8 +3079,14 @@ function buildClientMonthOptions(report) {
 
 function getClientModalMonth(report) {
   const monthOptions = buildClientMonthOptions(report);
+  if (state.clientModalMonth === REPORT_SCOPE_LAST_3 || state.clientModalMonth === REPORT_SCOPE_LAST_6) {
+    return state.clientModalMonth;
+  }
   if (isValidReportMonth(state.clientModalMonth) && monthOptions.includes(state.clientModalMonth)) {
     return state.clientModalMonth;
+  }
+  if (state.reportMonth === REPORT_SCOPE_LAST_3 || state.reportMonth === REPORT_SCOPE_LAST_6) {
+    return state.reportMonth;
   }
   if (isValidReportMonth(state.reportMonth) && monthOptions.includes(state.reportMonth)) {
     return state.reportMonth;
@@ -3090,7 +3096,7 @@ function getClientModalMonth(report) {
 
 function getClientModalTasks(report, month = "") {
   const reportableTasks = report.tasks || [];
-  if (!isValidReportMonth(month)) {
+  if (!month) {
     return reportableTasks;
   }
 
@@ -3098,7 +3104,7 @@ function getClientModalTasks(report, month = "") {
 }
 
 function buildClientModalReportView(report, month = "") {
-  const selectedMonth = isValidReportMonth(month) ? month : "";
+  const selectedMonth = isValidReportMonthSelection(month) ? month : "";
   const allTasks = report.tasks || [];
   const scopedTasks = selectedMonth ? allTasks.filter((task) => isDateInReportMonth(task.date, selectedMonth)) : allTasks;
   const categorySummary = buildTaskCategorySummary(scopedTasks, { includeAutoTasks: true });
@@ -3150,6 +3156,10 @@ function renderClientModal(report) {
             .join("")}
         </select>
       </label>
+      <div class="modal-month-quick-actions">
+        <button id="clientLast3MonthsBtn" class="btn btn-secondary btn-compact ${selectedMonth === REPORT_SCOPE_LAST_3 ? "is-active" : ""}" type="button" aria-pressed="${selectedMonth === REPORT_SCOPE_LAST_3 ? "true" : "false"}">Last 3 Months</button>
+        <button id="clientLast6MonthsBtn" class="btn btn-secondary btn-compact ${selectedMonth === REPORT_SCOPE_LAST_6 ? "is-active" : ""}" type="button" aria-pressed="${selectedMonth === REPORT_SCOPE_LAST_6 ? "true" : "false"}">Last 6 Months</button>
+      </div>
       <p class="report-filter-note modal-month-note">Select a month to show only that month’s tasks and export the same month in PDF.</p>
       <p class="subtle modal-month-scope">Viewing: ${escapeHtml(selectedMonthLabel)}</p>
     </div>
@@ -3272,7 +3282,17 @@ function renderClientModal(report) {
   `;
 
   document.getElementById("clientMonthInput")?.addEventListener("change", (event) => {
-    state.clientModalMonth = isValidReportMonth(event.target.value) ? event.target.value : "";
+    state.clientModalMonth = isValidReportMonthSelection(event.target.value) ? event.target.value : "";
+    renderClientModal(report);
+  });
+
+  document.getElementById("clientLast3MonthsBtn")?.addEventListener("click", () => {
+    state.clientModalMonth = REPORT_SCOPE_LAST_3;
+    renderClientModal(report);
+  });
+
+  document.getElementById("clientLast6MonthsBtn")?.addEventListener("click", () => {
+    state.clientModalMonth = REPORT_SCOPE_LAST_6;
     renderClientModal(report);
   });
 
@@ -4214,7 +4234,7 @@ async function registerServiceWorker() {
   }
 
   try {
-    await navigator.serviceWorker.register("./sw.js?v=20260514");
+    await navigator.serviceWorker.register("./sw.js?v=20260515");
   } catch (error) {
     console.warn("Service worker registration skipped.", error);
   }

@@ -1252,6 +1252,18 @@ tbody td:nth-child(7) {
   margin: 0;
 }
 
+.modal-month-quick-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.modal-month-quick-actions .btn.is-active {
+  border-color: rgba(31, 95, 157, 0.5);
+  color: #0b3b6f;
+  background: linear-gradient(180deg, rgba(223, 239, 255, 0.9), rgba(205, 228, 251, 0.92));
+}
+
 .modal-month-scope {
   margin: 0;
   font-size: 0.84rem;

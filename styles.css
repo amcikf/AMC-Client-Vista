@@ -697,7 +697,7 @@ input[type="email"]:focus {
 
 .report-filter-strip {
   display: grid;
-  grid-template-columns: minmax(220px, 320px) minmax(0, 1fr);
+  grid-template-columns: minmax(220px, 320px) auto minmax(0, 1fr);
   gap: 10px;
   align-items: end;
   margin-top: 12px;
@@ -710,6 +710,23 @@ input[type="email"]:focus {
 .report-filter-field {
   display: grid;
   gap: 6px;
+}
+
+.report-range-quick {
+  display: grid;
+  gap: 6px;
+}
+
+.report-range-quick-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.report-range-quick-actions .btn.is-active {
+  border-color: rgba(31, 95, 157, 0.5);
+  color: #0b3b6f;
+  background: linear-gradient(180deg, rgba(223, 239, 255, 0.9), rgba(205, 228, 251, 0.92));
 }
 
 .report-month-select {

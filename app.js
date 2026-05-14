@@ -217,6 +217,8 @@ const elements = {
   reportTableBody: document.getElementById("reportTableBody"),
   clientSearchInput: document.getElementById("clientSearchInput"),
   reportMonthInput: document.getElementById("reportMonthInput"),
+  last3MonthsBtn: document.getElementById("last3MonthsBtn"),
+  last6MonthsBtn: document.getElementById("last6MonthsBtn"),
   reportScopeNote: document.getElementById("reportScopeNote"),
   detailModal: document.getElementById("detailModal"),
   modalContent: document.getElementById("modalContent"),
@@ -271,6 +273,8 @@ function init() {
     renderMainTable(state.reports);
   });
   elements.reportMonthInput?.addEventListener("change", handleReportMonthChange);
+  elements.last3MonthsBtn?.addEventListener("click", () => handleQuickRangeSelect(REPORT_SCOPE_LAST_3));
+  elements.last6MonthsBtn?.addEventListener("click", () => handleQuickRangeSelect(REPORT_SCOPE_LAST_6));
   elements.closeModalBtn.addEventListener("click", closeModal);
   elements.detailModal.addEventListener("click", (event) => {
     if (event.target.dataset.closeModal === "true") {
@@ -710,7 +714,18 @@ function persistReportMonth(reportMonth) {
     window.localStorage.removeItem(REPORT_MONTH_STORAGE_KEY);
   }
   syncReportMonthInput();
+  updateQuickRangeButtons();
   updateReportScopeNote();
+}
+
+function handleQuickRangeSelect(rangeValue) {
+  if (!isValidReportMonthSelection(rangeValue) || (rangeValue !== REPORT_SCOPE_LAST_3 && rangeValue !== REPORT_SCOPE_LAST_6)) {
+    return;
+  }
+  persistReportMonth(rangeValue);
+  if (state.amcRows.length && state.taskEntries.length) {
+    void rerenderReportFromCachedData();
+  }
 }
 
 function persistAlertRecipientEmail(alertRecipientEmail) {
@@ -759,14 +774,25 @@ function populateReportMonthOptions(amcRows = []) {
   const monthOptions = buildReportMonthOptions(amcRows);
   const optionsMarkup = [
     `<option value="">All Months</option>`,
-    `<option value="${REPORT_SCOPE_LAST_3}">Last 3 Months (Including Current)</option>`,
-    `<option value="${REPORT_SCOPE_LAST_6}">Last 6 Months (Including Current)</option>`,
     ...monthOptions.map((monthKey) => `<option value="${monthKey}">${escapeHtml(formatReportMonthLabel(monthKey))}</option>`),
   ].join("");
 
   elements.reportMonthInput.innerHTML = optionsMarkup;
-  const validSelections = new Set(["", REPORT_SCOPE_LAST_3, REPORT_SCOPE_LAST_6, ...monthOptions]);
+  const validSelections = new Set(["", ...monthOptions]);
   elements.reportMonthInput.value = validSelections.has(currentValue) ? currentValue : "";
+}
+
+function updateQuickRangeButtons() {
+  const isLast3 = state.reportMonth === REPORT_SCOPE_LAST_3;
+  const isLast6 = state.reportMonth === REPORT_SCOPE_LAST_6;
+  if (elements.last3MonthsBtn) {
+    elements.last3MonthsBtn.classList.toggle("is-active", isLast3);
+    elements.last3MonthsBtn.setAttribute("aria-pressed", isLast3 ? "true" : "false");
+  }
+  if (elements.last6MonthsBtn) {
+    elements.last6MonthsBtn.classList.toggle("is-active", isLast6);
+    elements.last6MonthsBtn.setAttribute("aria-pressed", isLast6 ? "true" : "false");
+  }
 }
 
 function buildReportMonthOptions(amcRows = []) {

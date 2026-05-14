@@ -3539,19 +3539,15 @@ async function drawReferenceStyleClientPdfHeader(doc, report, { logoDataUrl = ""
     ["CLIENT", [report.clientName]],
     ["AMC START", [report.startDateDisplay]],
     ["AMC END", [formatAmcEndDateDisplay(report.endDateDisplay, report.endDateComparable)]],
-    ["PREPARED BY", ["I Knowledge Factory Pvt. Ltd.", "AMC Team"]],
   ];
   const sectionWidth = pageWidth - marginX * 2;
   const detailGap = 3;
-  const columnWidth = (sectionWidth - detailGap * 3) / 4;
+  const columnWidth = (sectionWidth - detailGap * (detailItems.length - 1)) / detailItems.length;
   const detailLabelColor = [110, 120, 132];
   const detailValueColor = [31, 43, 57];
   const detailLabelY = detailsTop + 6;
   const detailValueY = detailsTop + 13.5;
-  const preparedByLines = doc.splitTextToSize("I Knowledge Factory Pvt. Ltd.", columnWidth - 6);
-  const preparedByLineHeight = 4.2;
-  const preparedByBlockHeight = preparedByLines.length * preparedByLineHeight + preparedByLineHeight + 3.2;
-  const detailCardHeight = Math.max(21, 10 + preparedByBlockHeight);
+  const detailCardHeight = 21;
 
   detailItems.forEach((item, index) => {
     const x = marginX + index * (columnWidth + detailGap);
@@ -3570,16 +3566,8 @@ async function drawReferenceStyleClientPdfHeader(doc, report, { logoDataUrl = ""
 
     doc.setTextColor(...detailValueColor);
     doc.setFont("helvetica", "bold");
-    if (index === 3) {
-      doc.setFontSize(8.5);
-      preparedByLines.forEach((line, lineIndex) => {
-        doc.text(line, x + 3, detailValueY + lineIndex * preparedByLineHeight);
-      });
-      doc.text(item[1][1], x + 3, detailValueY + preparedByLines.length * preparedByLineHeight + 1.2);
-    } else {
-      doc.setFontSize(10.8);
-      doc.text(item[1][0], x + 3, detailValueY);
-    }
+    doc.setFontSize(10.8);
+    doc.text(item[1][0], x + 3, detailValueY);
   });
 
   const activityTitleY = detailsTop + detailCardHeight + 8;

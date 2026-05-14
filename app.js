@@ -2094,14 +2094,17 @@ function splitStructuredClientTasks(lines = []) {
 
   const combinedText = normalizedLines
     .join("\n")
-    .replace(/([.?!])\s+(?=\d+\.\s+)/g, "$1\n");
+    .replace(/([.?!])\s+(?=\d+\.\s+)/g, "$1\n")
+    .replace(/\s+(?=\d+\.\s+)/g, "\n")
+    // Support "case study 1: ... case study 2: ..." style blocks as separate tasks.
+    .replace(/\s+(?=case\s*study\s*\d+\s*:)/gi, "\n");
 
-  if (!/(?:^|\n)\s*\d+\.\s+/m.test(combinedText)) {
+  if (!/(?:^|\n)\s*\d+\.\s+/m.test(combinedText) && !/(?:^|\n)\s*case\s*study\s*\d+\s*:/im.test(combinedText)) {
     return [combinedText.trim()];
   }
 
   return combinedText
-    .split(/\n(?=\s*\d+\.\s+)/)
+    .split(/\n(?=\s*(?:\d+\.\s+|case\s*study\s*\d+\s*:))/i)
     .map((item) => item.trim())
     .filter(Boolean);
 }

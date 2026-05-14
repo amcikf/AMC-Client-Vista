@@ -833,11 +833,11 @@ function isValidReportMonth(value) {
 
 function formatReportMonthLabel(value) {
   if (value === REPORT_SCOPE_LAST_3) {
-    return "Last 3 Months (Including Current)";
+    return "Last 3 Months";
   }
 
   if (value === REPORT_SCOPE_LAST_6) {
-    return "Last 6 Months (Including Current)";
+    return "Last 6 Months";
   }
 
   if (!isValidReportMonth(value)) {
@@ -886,6 +886,7 @@ function getRecentMonthKeys(count) {
   const keys = [];
   const now = new Date();
   const cursor = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+  cursor.setUTCMonth(cursor.getUTCMonth() - 1);
   for (let index = 0; index < safeCount; index += 1) {
     keys.push(`${cursor.getUTCFullYear()}-${String(cursor.getUTCMonth() + 1).padStart(2, "0")}`);
     cursor.setUTCMonth(cursor.getUTCMonth() - 1);
@@ -4234,7 +4235,7 @@ async function registerServiceWorker() {
   }
 
   try {
-    await navigator.serviceWorker.register("./sw.js?v=20260515");
+    await navigator.serviceWorker.register("./sw.js?v=20260516");
   } catch (error) {
     console.warn("Service worker registration skipped.", error);
   }

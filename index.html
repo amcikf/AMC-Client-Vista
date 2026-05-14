@@ -9,10 +9,10 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./styles.css?v=20260515">
+  <link rel="stylesheet" href="./styles.css?v=20260516">
   <script>
     (async () => {
-      const appVersion = "20260515";
+      const appVersion = "20260516";
       const storageKey = "amc.appVersion.v1";
       if (window.localStorage.getItem(storageKey) !== appVersion) {
         window.localStorage.setItem(storageKey, appVersion);
@@ -38,7 +38,7 @@
   <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
-  <script defer src="./app.js?v=20260515"></script>
+  <script defer src="./app.js?v=20260516"></script>
 </head>
 <body>
   <div class="page-bg" aria-hidden="true">
@@ -215,7 +215,7 @@
                     <button id="last6MonthsBtn" class="btn btn-secondary btn-compact" type="button">Last 6 Months</button>
                   </div>
                 </div>
-                <p class="report-filter-note">Choose a month, Last 3 Months, or Last 6 Months to filter tasks. Keep All Months for the full AMC period.</p>
+                <p class="report-filter-note">Choose a month, Last 3 Months, or Last 6 Months to filter tasks. Last 3/6 Months uses previous months only (current month excluded).</p>
               </div>
 
               <div class="action-row">

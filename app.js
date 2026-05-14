@@ -2572,6 +2572,7 @@ function buildMonthlyAutoTasks(amcRows, existingTasks) {
   );
   const today = new Date();
   const todayCutoff = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
+  const fristamAliases = new Set(["fristam.in", "fristamin", "fristam"]);
 
   const autoTaskTemplates = [
     {
@@ -2590,6 +2591,11 @@ function buildMonthlyAutoTasks(amcRows, existingTasks) {
     if (!start || !end) {
       continue;
     }
+    const rowAliases = buildClientAliases(row.clientName, row.clientKey);
+    const isFristamProject = rowAliases.some((alias) => fristamAliases.has(alias));
+    const autoTemplatesForRow = isFristamProject
+      ? autoTaskTemplates.map((template) => ({ ...template, minutes: 30 }))
+      : autoTaskTemplates;
 
     const cursor = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), 1));
 
@@ -2606,7 +2612,7 @@ function buildMonthlyAutoTasks(amcRows, existingTasks) {
 
       const dateLabel = formatGeneratedTaskDate(dateForMonth);
 
-      for (const template of autoTaskTemplates) {
+      for (const template of autoTemplatesForRow) {
         const taskKey = `${row.clientKey}|${normalizeDateKey(dateLabel)}|${normalizeTaskKey(template.description)}`;
         if (existingKeys.has(taskKey)) {
           continue;

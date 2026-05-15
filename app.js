@@ -4169,7 +4169,17 @@ function getMonthIndex(monthText) {
 }
 
 function formatHours(value) {
-  return Number(value).toFixed(2);
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return "0h 00m";
+  }
+
+  const totalMinutes = Math.round(numeric * 60);
+  const sign = totalMinutes < 0 ? "-" : "";
+  const absMinutes = Math.abs(totalMinutes);
+  const hours = Math.floor(absMinutes / 60);
+  const minutes = absMinutes % 60;
+  return `${sign}${hours}h ${String(minutes).padStart(2, "0")}m`;
 }
 
 function formatMinutes(value) {

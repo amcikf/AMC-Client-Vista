@@ -9,6 +9,19 @@
   },
   "dependencies": {
     "nodemailer": "^8.0.4",
+    "pdf-parse": "^2.4.5",
     "xlsx": "^0.18.5"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/amcikf/AMC-Client-Vista.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/amcikf/AMC-Client-Vista/issues"
+  },
+  "homepage": "https://github.com/amcikf/AMC-Client-Vista#readme"
 }

@@ -8,7 +8,7 @@
   <title>AMC Hours Tracking and Reporting</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="./styles.css?v=20260515a">
   <script>
     (async () => {
@@ -41,19 +41,25 @@
   <script defer src="./app.js?v=20260515a"></script>
 </head>
 <body>
-  <div class="page-bg" aria-hidden="true">
-    <span class="page-orb page-orb-a"></span>
-    <span class="page-orb page-orb-b"></span>
-    <span class="page-grid"></span>
-  </div>
+  <div class="app-shell">
+    <aside class="app-sidebar" aria-label="Workspace navigation">
+      <div class="sidebar-brand"><span class="brand-mark">A</span><span>AMC</span></div>
+      <nav class="sidebar-nav" aria-label="Primary">
+        <span class="nav-label">WORKSPACE</span>
+        <a class="nav-item active" href="#workspace"><span class="nav-icon">▦</span>Reports</a>
+        <a class="nav-item" href="#reportSection"><span class="nav-icon">▤</span>Client summary</a>
+        <span class="nav-label nav-label-bottom">SETTINGS</span>
+        <a class="nav-item" href="#workspace"><span class="nav-icon">⚙</span>Data sources</a>
+      </nav>
+      <div class="sidebar-footer"><span class="status-dot"></span>Sources connected</div>
+    </aside>
 
-  <div class="page-shell">
+    <div class="page-shell">
     <div class="topbar">
       <div class="brand-lockup">
-        <span class="brand-mark">AMC</span>
         <div>
-          <p class="brand-name">AMC Hours Tracker</p>
-          <p class="brand-subtitle">Published sources, client-side reporting</p>
+          <p class="brand-name">AMC Operations</p>
+          <p class="brand-subtitle">Hours tracking and reporting</p>
         </div>
       </div>
       <div class="topbar-note">
@@ -64,36 +70,30 @@
 
     <header class="hero">
       <div>
-        <p class="eyebrow">Client-side AMC reporting</p>
-        <h1>AMC Hours Tracking and Reporting</h1>
+        <p class="eyebrow">Reports / Utilization</p>
+        <h1>AMC hours report</h1>
         <p class="hero-copy">
-          Use published AMC and task sources, calculate client-wise utilization in the browser, and export clean
-          corporate PDF reports without a backend or database.
+          Bring your AMC and task data together, review client utilization, and create professional reports.
         </p>
-        <div class="hero-badges" aria-label="Highlights">
-          <span class="hero-badge">Client-side only</span>
-          <span class="hero-badge">PDF export ready</span>
-          <span class="hero-badge">Published sources</span>
-        </div>
       </div>
       <div class="hero-panel">
         <div class="hero-stat" title="The app does the work in your browser, so your files stay on your machine.">
-          <span>Processing</span>
-          <strong>100% Client-Side</strong>
+          <span>01</span>
+          <strong>Connect sources</strong>
         </div>
         <div class="hero-stat" title="Saved source links and file settings live only in this browser.">
-          <span>Storage</span>
-          <strong>Local Browser Memory</strong>
+          <span>02</span>
+          <strong>Upload files</strong>
         </div>
         <div class="hero-stat" title="You can export both a summary PDF and a client-level PDF after generating the report.">
-          <span>Exports</span>
-          <strong>Summary + Client PDF</strong>
+          <span>03</span>
+          <strong>Generate report</strong>
         </div>
       </div>
     </header>
 
     <main class="layout">
-      <section class="panel workspace-panel" title="This area is where you choose between saved published links and local file uploads.">
+      <section id="workspace" class="panel workspace-panel" title="This area is where you choose between saved published links and local file uploads.">
         <div class="workspace-topline">
           <div class="subsection-heading">
             <h3>Source & Input Workspace</h3>
@@ -266,6 +266,7 @@
         </section>
       </section>
     </main>
+    </div>
   </div>
 
   <div id="detailModal" class="modal hidden" aria-hidden="true" role="dialog" aria-modal="true">
